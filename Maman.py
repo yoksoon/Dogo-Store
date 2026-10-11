@@ -115,9 +115,19 @@ def init_db_automatique():
 # Exécution systématique au démarrage
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (BARRE SUPÉRIEURE MASQUÉE) ---
 st.markdown("""
 <style>
+    /* Masquer le header supérieur de Streamlit (Share, étoiles, menus...) */
+    header[data-testid="stHeader"] {
+        display: none !important;
+    }
+
+    /* Masquer le pied de page 'Made with Streamlit' */
+    footer {
+        visibility: hidden;
+    }
+
     .stApp {
         background: linear-gradient(135deg, #fff5f7 0%, #fce4ec 50%, #f8bbd0 100%);
         font-family: 'Poppins', system-ui, -apple-system, sans-serif;
