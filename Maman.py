@@ -1,8 +1,15 @@
 import streamlit as st
 import urllib.parse
 from datetime import datetime
-import psycopg2
-from psycopg2.extras import RealDictCursor
+import base64
+
+# Importation sécurisée de psycopg2
+try:
+    import psycopg2
+    from psycopg2.extras import RealDictCursor
+except ModuleNotFoundError:
+    st.error("❌ Le module 'psycopg2' n'est pas installé. Veuillez installer 'psycopg2-binary'.")
+    st.stop()
 
 # Configuration de la page
 st.set_page_config(
@@ -11,14 +18,22 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- PARAMÈTRES DE CONNEXION POSTGRESQL SUPABASE ---
-DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
-DB_PORT = "5432"
-DB_NAME = "postgres"
-DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
-DB_PASS = "u3eS&R-e27cYmL&"
+# --- RÉCUPÉRATION DES SECRETS POSTGRESQL / SUPABASE ---
+try:
+    DB_HOST = st.secrets["postgres"]["host"]
+    DB_PORT = st.secrets["postgres"]["port"]
+    DB_NAME = st.secrets["postgres"]["dbname"]
+    DB_USER = st.secrets["postgres"]["user"]
+    DB_PASS = st.secrets["postgres"]["password"]
+except Exception:
+    # Valeurs par défaut de secours si st.secrets n'est pas encore configuré en local
+    DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
+    DB_PORT = "5432"
+    DB_NAME = "postgres"
+    DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
+    DB_PASS = "u3eS&R-e27cYmL&"
 
-# Fonction pour obtenir une connexion à la BDD
+# Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
     try:
         conn = psycopg2.connect(
@@ -34,7 +49,16 @@ def get_db_connection():
         st.error(f"Erreur de connexion PostgreSQL : {e}")
         return None
 
-# --- CRÉATION AUTOMATIQUE DES TABLES DANS SUPABASE ---
+# --- CONVERTISSEUR D'IMAGE EN BASE64 POUR STOCKAGE PERMANENT ---
+def encoder_image_base64(fichier_image):
+    if fichier_image is not None:
+        bytes_data = fichier_image.getvalue()
+        base64_str = base64.b64encode(bytes_data).decode()
+        mime_type = fichier_image.type
+        return f"data:{mime_type};base64,{base64_str}"
+    return ""
+
+# --- INITIALISATION AUTOMATIQUE DE LA STRUCTURE DB ---
 def init_db_automatique():
     conn = get_db_connection()
     if conn:
@@ -79,7 +103,7 @@ def init_db_automatique():
                 );
             """)
 
-            # Insertion des données par défaut si vide
+            # Insertion de la configuration par défaut si vide
             cur.execute("""
                 INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
                 VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', '221770000000', 'Dakar, Sénégal')
@@ -88,7 +112,7 @@ def init_db_automatique():
             conn.commit()
         conn.close()
 
-# Exécution de l'initialisation automatique au lancement
+# Exécution systématique au démarrage
 init_db_automatique()
 
 # --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
@@ -199,7 +223,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- FONCTIONS DE REQUÊTES SQL SUPABASE ---
+# --- REQUÊTES LECTURE SUPABASE ---
 def charger_infos_boutique():
     conn = get_db_connection()
     if conn:
@@ -278,14 +302,13 @@ TRADUCTIONS = {
         "btn_ajouter": "Ajouter au Panier",
         "succes_ajout": "a été ajouté à votre panier !",
         "vendeur_titre": "✨ Espace Vendeur & Publication Directe",
-        "vendeur_desc": "Publiez ou gérez vos articles enregistrés de façon permanente dans Supabase.",
+        "vendeur_desc": "Publiez vos articles de façon permanente dans Supabase.",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
         "prix_article": "Prix standard (en FCFA)",
         "est_promo": "Placer cet article en Promo ?",
         "taux_promo": "Pourcentage de remise (%)",
         "cat_choix": "Choisir le public cible",
         "sub_choix": "Choisir le type d'article",
-        "photo_article": "Saisir l'URL de la photo ou laisser vide",
         "btn_publier": "Mettre en ligne l'article",
         "err_nom": "Veuillez entrer un nom d'article valide.",
         "succes_publi": "Succès ! Votre création est enregistrée dans Supabase.",
@@ -333,7 +356,6 @@ TRADUCTIONS = {
         "taux_promo": "Turu wàññi gi (ci %)",
         "cat_choix": "Tannal ñimuy jaay (Bébé, Femmes...)",
         "sub_choix": "Tannal mbolloom bagas bi (Yeere, Dall...)",
-        "photo_article": "Duggal nataalu bagas bi",
         "btn_publier": "Feenale bagas bi",
         "err_nom": "Diisaleel turu bagas bu dëggu.",
         "succes_publi": "Mbegte ! Sa bagas dugg na ci Supabase.",
@@ -386,7 +408,7 @@ if nb_articles > 0:
 st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
-# FONCTION D'AFFICHAGE DU RAYON
+# FONCTION D'AFFICHAGE DES RAYONS
 def afficher_rayon(cat_courante):
     recherche = st.text_input(t["recherche"], placeholder="Tapez le nom d'un article...")
     sous_labels = [t["sub_vetements"], t["sub_chaussures"], t["sub_tissus"], t["sub_accessoires"]]
@@ -470,7 +492,7 @@ def afficher_gestion_catalogue():
                     st.success(f"Article '{prod['nom']}' supprimé !")
                     st.rerun()
 
-# --- NAVIGATION PAR MENU ---
+# --- PAGES PRINCIPALES ---
 if choix_menu == t["menu_bebe"]:
     st.subheader("👶 Rayon Bébé")
     afficher_rayon("Bébé")
@@ -601,7 +623,12 @@ elif choix_menu == t["menu_vendeur"]:
                 categorie_cible = dict_categories[cat_choisie_label]
                 sous_categorie_cible = dict_sous_categories[sub_choisie_label]
                 
-                image_url_input = st.text_input("URL / Lien web de l'image du produit (Optionnel)")
+                # OPTION 1 : Téléversement direct depuis l'appareil
+                photo_fichier = st.file_uploader("📷 Téléverser la photo du produit (PNG, JPG, JPEG)", type=["jpg", "png", "jpeg"])
+                
+                # Alternative URL
+                image_url_input = st.text_input("🔗 Ou collez le lien/URL d'une image web (Optionnel)")
+                
                 valider_ajout = st.form_submit_button(t["btn_publier"], use_container_width=True)
 
                 if valider_ajout:
@@ -609,13 +636,20 @@ elif choix_menu == t["menu_vendeur"]:
                         st.error(t["err_nom"])
                     else:
                         prix_final = int(prix_origine * (1 - taux_reduction / 100)) if appliquer_promo else prix_origine
+                        
+                        # Priorité au fichier photo téléversé depuis l'appareil
+                        if photo_fichier is not None:
+                            final_image_url = encoder_image_base64(photo_fichier)
+                        else:
+                            final_image_url = image_url_input.strip()
+
                         conn = get_db_connection()
                         if conn:
                             with conn.cursor() as cur:
                                 cur.execute("""
                                     INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, image_url)
                                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-                                """, (nom_produit.strip(), categorie_cible, sous_categorie_cible, prix_origine, prix_final, appliquer_promo, taux_reduction, image_url_input.strip()))
+                                """, (nom_produit.strip(), categorie_cible, sous_categorie_cible, prix_origine, prix_final, appliquer_promo, taux_reduction, final_image_url))
                                 conn.commit()
                             conn.close()
 
