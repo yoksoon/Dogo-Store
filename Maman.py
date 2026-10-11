@@ -27,7 +27,6 @@ try:
     DB_USER = st.secrets["postgres"]["user"]
     DB_PASS = st.secrets["postgres"]["password"]
 except Exception:
-    # Valeurs par défaut de secours si st.secrets n'est pas encore configuré en local
     DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
     DB_PORT = "5432"
     DB_NAME = "postgres"
@@ -64,7 +63,6 @@ def init_db_automatique():
     conn = get_db_connection()
     if conn:
         with conn.cursor() as cur:
-            # 1. Table Produits
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS produits (
                     id SERIAL PRIMARY KEY,
@@ -80,7 +78,6 @@ def init_db_automatique():
                 );
             """)
             
-            # 2. Table Avis Clients
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS avis_clients (
                     id SERIAL PRIMARY KEY,
@@ -93,7 +90,6 @@ def init_db_automatique():
                 );
             """)
 
-            # 3. Table Infos Boutique
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS infos_boutique (
                     id INT PRIMARY KEY DEFAULT 1,
@@ -104,7 +100,6 @@ def init_db_automatique():
                 );
             """)
 
-            # 4. Table Commandes Clients
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS commandes (
                     id SERIAL PRIMARY KEY,
@@ -119,7 +114,6 @@ def init_db_automatique():
                 );
             """)
 
-            # Insertion de la configuration par défaut si vide
             cur.execute("""
                 INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
                 VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', '221770000000', 'Dakar, Sénégal')
@@ -128,18 +122,15 @@ def init_db_automatique():
             conn.commit()
         conn.close()
 
-# Exécution systématique au démarrage
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE & CADRE XXL DU LOGO ---
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (OPTIMISÉ TOUS SUPPORTS) ---
 st.markdown("""
 <style>
-    /* Masquer le header supérieur natif de Streamlit */
+    /* Masquer les éléments natifs Streamlit encombrants sur mobile */
     header[data-testid="stHeader"] {
         display: none !important;
     }
-
-    /* Masquer le footer natif de Streamlit */
     footer {
         visibility: hidden;
     }
@@ -147,45 +138,45 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #fff5f7 0%, #fce4ec 50%, #f8bbd0 100%);
         font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+        overflow-x: hidden;
     }
 
-    /* Cadre XXL Super Attractif pour le Logo a.jpeg */
+    /* Cadre XXL Logo Responsive */
     .logo-xxl-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        margin-bottom: 20px;
-        padding: 10px;
+        margin-bottom: 15px;
+        padding: 5px;
+        width: 100%;
     }
     .logo-xxl-frame {
         background: linear-gradient(135deg, #d4af37 0%, #e91e63 50%, #880e4f 100%);
-        padding: 6px;
-        border-radius: 28px;
-        box-shadow: 0 12px 35px rgba(233, 30, 99, 0.25);
-        display: inline-block;
-        transition: transform 0.3s ease;
-    }
-    .logo-xxl-frame:hover {
-        transform: scale(1.02);
+        padding: 4px;
+        border-radius: 24px;
+        box-shadow: 0 8px 25px rgba(233, 30, 99, 0.25);
+        max-width: 100%;
     }
     .logo-xxl-inner {
         background-color: #ffffff;
-        border-radius: 24px;
+        border-radius: 20px;
         overflow: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
-        padding: 5px;
+        padding: 4px;
     }
     .logo-xxl-inner img {
-        border-radius: 20px;
-        max-height: 180px;
+        border-radius: 16px;
+        max-height: 140px;
+        width: auto;
+        max-width: 100%;
         object-fit: contain;
     }
 
-    /* Header principal */
+    /* Titres adaptatifs */
     .brand-title {
-        font-size: clamp(1.8rem, 5vw, 3rem) !important;
+        font-size: clamp(1.5rem, 4vw, 2.8rem) !important;
         font-weight: 800;
         background: -webkit-linear-gradient(45deg, #d81b60, #e91e63, #c2185b, #d4af37);
         -webkit-background-clip: text;
@@ -193,113 +184,125 @@ st.markdown("""
         text-align: center;
         margin-bottom: 2px;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
+        word-break: break-word;
     }
     .brand-subtitle {
         text-align: center;
         color: #880e4f;
-        font-size: clamp(0.85rem, 2vw, 1.05rem);
-        margin-bottom: 15px;
+        font-size: clamp(0.8rem, 1.8vw, 1rem);
+        margin-bottom: 12px;
         font-style: italic;
+        padding: 0 10px;
     }
 
-    /* Styling du Menu Horizontal en Haut */
+    /* Menu Horizontal Fluide et Tactile pour Mobile & Tablettes */
     div[data-testid="stRadio"] > div {
         flex-direction: row !important;
         justify-content: center !important;
         flex-wrap: wrap !important;
-        gap: 8px !important;
+        gap: 6px !important;
         background-color: #2c001e;
-        padding: 10px 15px;
-        border-radius: 18px;
-        box-shadow: 0 6px 18px rgba(44, 0, 30, 0.2);
-        margin-bottom: 25px;
+        padding: 8px 10px;
+        border-radius: 16px;
+        box-shadow: 0 4px 15px rgba(44, 0, 30, 0.2);
+        margin-bottom: 20px;
+        width: 100%;
     }
 
     div[data-testid="stRadio"] label {
         background-color: rgba(255, 255, 255, 0.08) !important;
         color: #f8bbd0 !important;
-        padding: 8px 16px !important;
-        border-radius: 12px !important;
+        padding: 6px 12px !important;
+        border-radius: 10px !important;
         border: 1px solid rgba(248, 187, 208, 0.2) !important;
-        transition: all 0.3s ease !important;
+        font-size: clamp(0.8rem, 1.5vw, 0.95rem) !important;
+        transition: all 0.2s ease !important;
         cursor: pointer !important;
+        flex: 1 1 auto;
+        text-align: center;
     }
 
     div[data-testid="stRadio"] label:hover {
         background-color: #e91e63 !important;
         color: #ffffff !important;
-        transform: translateY(-2px);
     }
 
-    /* Cards produits */
+    /* Cartes Produits Responsive */
     .product-card {
         background-color: #ffffff;
-        border-radius: 20px;
-        padding: 16px;
-        box-shadow: 0 8px 20px rgba(233, 30, 99, 0.08);
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 16px;
+        padding: 12px;
+        box-shadow: 0 6px 15px rgba(233, 30, 99, 0.08);
+        transition: transform 0.2s ease;
         border: 1px solid #f8bbd0;
         text-align: center;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         height: 100%;
+        margin-bottom: 15px;
     }
-    .product-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 25px rgba(216, 27, 96, 0.18);
-        border-color: #e91e63;
+    
+    .product-card img {
+        border-radius: 12px;
+        max-height: 200px;
+        object-fit: cover;
+        width: 100%;
     }
+
     .review-card {
+        background-color: #ffffff;
+        border-radius: 12px;
+        padding: 12px;
+        border-left: 4px solid #e91e63;
+        margin-bottom: 10px;
+        box-shadow: 0 3px 10px rgba(233, 30, 99, 0.05);
+    }
+
+    .order-card {
         background-color: #ffffff;
         border-radius: 14px;
         padding: 14px;
-        border-left: 5px solid #e91e63;
-        margin-bottom: 12px;
-        box-shadow: 0 4px 12px rgba(233, 30, 99, 0.05);
-    }
-
-    /* Card commande pour le vendeur */
-    .order-card {
-        background-color: #ffffff;
-        border-radius: 16px;
-        padding: 18px;
         border: 1px solid #f8bbd0;
-        margin-bottom: 15px;
-        box-shadow: 0 6px 15px rgba(233, 30, 99, 0.06);
+        margin-bottom: 12px;
+        box-shadow: 0 4px 12px rgba(233, 30, 99, 0.06);
     }
 
     .promo-badge {
         background: linear-gradient(45deg, #e91e63, #ff4081);
         color: white;
-        padding: 4px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
+        padding: 3px 10px;
+        border-radius: 16px;
+        font-size: 0.75rem;
         font-weight: bold;
         display: inline-block;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
     }
+    
     .price-old {
         text-decoration: line-through;
         color: #ad1457;
-        font-size: 0.9rem;
-        margin-right: 6px;
+        font-size: 0.85rem;
+        margin-right: 4px;
     }
+    
     .price-new {
         color: #880e4f;
         font-weight: 800;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
     }
 
+    /* Boutons tactiles agrandis pour mobile */
     .stButton>button {
-        border-radius: 12px !important;
+        border-radius: 10px !important;
         font-weight: 600 !important;
         background-color: #e91e63 !important;
         color: #ffffff !important;
         border: none !important;
-        padding: 8px 16px !important;
+        padding: 10px 14px !important;
         width: 100% !important;
+        min-height: 42px !important;
     }
 
     .whatsapp-btn {
@@ -310,51 +313,59 @@ st.markdown("""
         background-color: #25D366;
         color: white !important;
         text-align: center;
-        padding: 14px;
-        border-radius: 14px;
+        padding: 12px;
+        border-radius: 12px;
         font-weight: bold;
-        font-size: 1rem;
+        font-size: 0.95rem;
         text-decoration: none;
-        margin-top: 15px;
+        margin-top: 12px;
+        box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
     }
 
-    /* FOOTER DE VALORISATION EN BAS DE PAGE */
+    /* Footer de valorisation responsive */
     .footer-container {
         background: linear-gradient(135deg, #2c001e 0%, #4a0033 100%);
         color: #f8bbd0;
-        padding: 35px 20px 20px 20px;
-        border-radius: 24px 24px 0 0;
-        margin-top: 50px;
-        box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.15);
+        padding: 25px 15px 15px 15px;
+        border-radius: 20px 20px 0 0;
+        margin-top: 40px;
+        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.15);
     }
     .footer-features {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 20px;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 15px;
         text-align: center;
-        margin-bottom: 30px;
-        padding-bottom: 25px;
+        margin-bottom: 20px;
+        padding-bottom: 20px;
         border-bottom: 1px solid rgba(248, 187, 208, 0.2);
     }
     .feature-box h4 {
         color: #d4af37;
-        margin-bottom: 5px;
-        font-size: 1.05rem;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
     }
     .feature-box p {
-        font-size: 0.85rem;
+        font-size: 0.78rem;
         color: #fce4ec;
         margin: 0;
     }
     .footer-bottom {
         text-align: center;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         color: #f8bbd0;
     }
     .footer-bottom a {
         color: #d4af37;
         text-decoration: none;
         font-weight: bold;
+    }
+
+    /* Ajustement responsive des colonnes Streamlit sur mobile */
+    @media(max-width: 768px) {
+        .row-widget.stHorizontal {
+            flex-direction: column !important;
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -427,7 +438,7 @@ TRADUCTIONS = {
         "menu_femmes": "👗 Femmes",
         "menu_hommes": "👔 Hommes",
         "menu_promotions": "🔥 Promos",
-        "menu_avis": "⭐ Avis Clients",
+        "menu_avis": "⭐ Avis",
         "menu_vendeur": "✨ Vendeur",
         "menu_admin": "⚙️ Admin",
         "menu_panier": f"🛒 Panier ({len(st.session_state.panier)})",
@@ -439,9 +450,9 @@ TRADUCTIONS = {
         "promo_desc": "Profitez de nos prix réduits sur une sélection de pièces magnifiques.",
         "vide_cat": "Aucun article disponible actuellement dans ce rayon",
         "vide_promo": "Aucun produit en promo pour le moment.",
-        "sans_photo": "📷 Pas de visuel disponible",
+        "sans_photo": "📷 Pas de visuel",
         "btn_ajouter": "Ajouter au Panier",
-        "succes_ajout": "a été ajouté à votre panier !",
+        "succes_ajout": "ajouté au panier !",
         "vendeur_titre": "✨ Espace Vendeur & Gestion Boutique",
         "vendeur_desc": "Gérez vos articles et suivez l'état des commandes de vos clients en direct.",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
@@ -450,16 +461,16 @@ TRADUCTIONS = {
         "taux_promo": "Pourcentage de remise (%)",
         "cat_choix": "Choisir le public cible",
         "sub_choix": "Choisir le type d'article",
-        "btn_publier": "Mettre en ligne l'article",
+        "btn_publier": "Mettre en ligne",
         "err_nom": "Veuillez entrer un nom d'article valide.",
-        "succes_publi": "Succès ! Votre création est enregistrée dans Supabase.",
+        "succes_publi": "Succès ! Votre création est enregistrée.",
         "panier_titre": "🛒 Mon Panier d'Achat VIP",
         "panier_vide": "Votre panier est vide.",
         "btn_retirer": "Retirer",
-        "total_depenses": "Montant Total des Achats :",
-        "btn_valider": "Générer ma commande WhatsApp",
+        "total_depenses": "Total des Achats :",
+        "btn_valider": "Commander sur WhatsApp",
         "succes_commande": "🎉 Commande enregistrée ! Cliquez ci-dessous pour l'envoyer sur WhatsApp.",
-        "recherche": "🔎 Rechercher un article..."
+        "recherche": "🔎 Rechercher..."
     },
     "WOLOF": {
         "titre_app": f"👑 {infos_boutique['nom_boutique']}",
@@ -469,9 +480,9 @@ TRADUCTIONS = {
         "menu_femmes": "👗 Jigéen yi",
         "menu_hommes": "👔 Góor yi",
         "menu_promotions": "🔥 Promos",
-        "menu_avis": "⭐ Xalaat yi",
-        "menu_vendeur": "✨ Jaaykat bi",
-        "menu_admin": "⚙️ Boroom bi",
+        "menu_avis": "⭐ Xalaat",
+        "menu_vendeur": "✨ Jaaykat",
+        "menu_admin": "⚙️ Boroom",
         "menu_panier": f"🛒 Saku ({len(st.session_state.panier)})",
         "sub_vetements": "👗 Yeere yi",
         "sub_chaussures": "👟 Dall yi",
@@ -482,7 +493,7 @@ TRADUCTIONS = {
         "vide_cat": "Amagul benn bagas léegi ci fi",
         "vide_promo": "Amagul benn bagas bu wàññiku njeeg bi léegi.",
         "sans_photo": "📷 Amul nataal",
-        "btn_ajouter": "Yobbal ci saku gi",
+        "btn_ajouter": "Yobbal ci saku",
         "succes_ajout": "dugg na ci saku gi !",
         "vendeur_titre": "✨ Palu Jaaykat bi - Maman Dogo Fashion Store",
         "vendeur_desc": "Bindal fisii ngir feenalaat sa bagas ci lëlu jaay gi.",
@@ -498,14 +509,14 @@ TRADUCTIONS = {
         "panier_titre": "🛒 Sa Saku Jënd VIP - Maman Dogo",
         "panier_vide": "Sa saku jënd feesul.",
         "btn_retirer": "Dindi",
-        "total_depenses": "Mbolloog xalis bi nga wara fay :",
-        "btn_valider": "Yöbbal sama jënd ci WhatsApp",
+        "total_depenses": "Mbolloog xalis bi :",
+        "btn_valider": "Yöbbal ci WhatsApp",
         "succes_commande": "🎉 Jënd gi pare na !",
-        "recherche": "🔎 Seetbal bagas..."
+        "recherche": "🔎 Seetbal..."
     }
 }
 
-# --- AFFICHAGE DU LOGO A.JPEG DANS UN CADRE XXL TRÈS ATTRACTIF EN HAUT ---
+# --- AFFICHAGE DU LOGO A.JPEG DANS LE CADRE XXL ---
 if os.path.exists("a.jpeg"):
     with open("a.jpeg", "rb") as f:
         logo_bytes = f.read()
@@ -520,15 +531,14 @@ if os.path.exists("a.jpeg"):
         </div>
     """, unsafe_allow_html=True)
 else:
-    # Solution de repli si le fichier a.jpeg n'est pas encore placé au même endroit
     st.markdown("""
-        <div style="text-align: center; margin-bottom: 15px;">
-            <span style="background: linear-gradient(135deg, #d4af37, #e91e63); color: white; padding: 10px 25px; border-radius: 20px; font-weight: bold; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(233,30,99,0.3);">👑 MAMAN DOGO FASHION STORE 👑</span>
+        <div style="text-align: center; margin-bottom: 12px;">
+            <span style="background: linear-gradient(135deg, #d4af37, #e91e63); color: white; padding: 8px 20px; border-radius: 16px; font-weight: bold; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(233,30,99,0.3);">👑 MAMAN DOGO FASHION STORE 👑</span>
         </div>
     """, unsafe_allow_html=True)
 
 # --- ENTÊTE PRINCIPAL & CHOIX DE LA LANGUE ---
-col_head_title, col_head_lang = st.columns([4, 1])
+col_head_title, col_head_lang = st.columns([3, 1])
 
 with col_head_lang:
     langue = st.selectbox("🌐 Langue :", ["Français", "Wolof"], label_visibility="collapsed")
@@ -538,7 +548,7 @@ with col_head_lang:
 st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
-# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE ---
+# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE (TOUS SUPPORTS) ---
 menu_options = [
     t["menu_bebe"],
     t["menu_enfants"],
@@ -557,7 +567,7 @@ st.markdown("---")
 
 # FONCTION D'AFFICHAGE DES RAYONS
 def afficher_rayon(cat_courante):
-    recherche = st.text_input(t["recherche"], placeholder="Tapez le nom d'un article...")
+    recherche = st.text_input(t["recherche"], placeholder="Rechercher...")
     sous_labels = [t["sub_vetements"], t["sub_chaussures"], t["sub_tissus"], t["sub_accessoires"]]
     sous_tabs = st.tabs(sous_labels)
 
@@ -578,7 +588,7 @@ def afficher_rayon(cat_courante):
             if not produits_categorie:
                 st.info(f"{t['vide_cat']} '{sous_labels[j]}'.")
             else:
-                cols = st.columns([1, 1, 1])
+                cols = st.columns(3)
                 for index, produit in enumerate(produits_categorie):
                     with cols[index % 3]:
                         st.markdown('<div class="product-card">', unsafe_allow_html=True)
@@ -630,14 +640,14 @@ def afficher_gestion_catalogue():
             with c3:
                 st.write(f"{prod['prix_final']:,} FCFA")
             with c4:
-                if st.button("🗑️ Supprimer", key=f"del_spb_{prod['id']}"):
+                if st.button("🗑️", key=f"del_spb_{prod['id']}"):
                     conn = get_db_connection()
                     if conn:
                         with conn.cursor() as cur:
                             cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
                             conn.commit()
                         conn.close()
-                    st.success(f"Article '{prod['nom']}' supprimé !")
+                    st.success("Supprimé !")
                     st.rerun()
 
 # FONCTION D'AFFICHAGE & GESTION DES COMMANDES (POUR LE VENDEUR)
@@ -646,14 +656,13 @@ def afficher_gestion_commandes():
     if not cmds:
         st.info("Aucune commande n'a été passée pour le moment.")
     else:
-        # Filtre par statut
         statuts_dispos = ["Toutes", "En attente", "En cours de livraison", "Livrée", "Annulée"]
-        filtre_statut = st.selectbox("🎯 Filtrer par état de commande :", statuts_dispos)
+        filtre_statut = st.selectbox("🎯 Filtrer par état :", statuts_dispos)
         
         if filtre_statut != "Toutes":
             cmds = [c for c in cmds if c["statut"] == filtre_statut]
 
-        st.caption(f"Total : {len(cmds)} commande(s) affichée(s)")
+        st.caption(f"Total : {len(cmds)} commande(s)")
 
         for cmd in cmds:
             badge_color = "#ff9800" if cmd["statut"] == "En attente" else ("#2196F3" if cmd["statut"] == "En cours de livraison" else ("#4CAF50" if cmd["statut"] == "Livrée" else "#f44336"))
@@ -661,16 +670,16 @@ def afficher_gestion_commandes():
             with st.container():
                 st.markdown(f"""
                 <div class="order-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
                         <h4 style="margin:0; color:#880e4f;">📦 Commande #{cmd['id']} — {cmd['nom_client']}</h4>
-                        <span style="background-color:{badge_color}; color:white; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.85rem;">{cmd['statut']}</span>
+                        <span style="background-color:{badge_color}; color:white; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:0.8rem;">{cmd['statut']}</span>
                     </div>
-                    <p style="margin:6px 0; color:#555;">📅 <b>Date :</b> {cmd['date_commande']} | 📞 <b>Tél :</b> {cmd['telephone']} | 📍 <b>Adresse :</b> {cmd['adresse']}</p>
-                    <div style="background-color:#fff5f7; padding:10px; border-radius:10px; margin:8px 0;">
-                        <b>🛍️ Articles commandés :</b><br>
+                    <p style="margin:5px 0; color:#555; font-size:0.85rem;">📅 {cmd['date_commande']} | 📞 {cmd['telephone']} | 📍 {cmd['adresse']}</p>
+                    <div style="background-color:#fff5f7; padding:8px; border-radius:8px; margin:6px 0;">
+                        <b>🛍️ Articles :</b><br>
                         <small>{cmd['details_articles'].replace(chr(10), '<br>')}</small>
                     </div>
-                    <h4 style="color:#e91e63; margin-top:5px;">💰 Total : {cmd['montant_total']:,} FCFA</h4>
+                    <h4 style="color:#e91e63; margin-top:4px;">💰 Total : {cmd['montant_total']:,} FCFA</h4>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -678,7 +687,7 @@ def afficher_gestion_commandes():
                 
                 with col_stat:
                     nouveau_statut = st.selectbox(
-                        "Changer l'état :", 
+                        "État :", 
                         ["En attente", "En cours de livraison", "Livrée", "Annulée"], 
                         index=["En attente", "En cours de livraison", "Livrée", "Annulée"].index(cmd["statut"]) if cmd["statut"] in ["En attente", "En cours de livraison", "Livrée", "Annulée"] else 0,
                         key=f"status_select_{cmd['id']}"
@@ -690,24 +699,24 @@ def afficher_gestion_commandes():
                                 cur.execute("UPDATE commandes SET statut = %s WHERE id = %s;", (nouveau_statut, cmd['id']))
                                 conn.commit()
                             conn.close()
-                        st.success("État mis à jour !")
+                        st.success("Mis à jour !")
                         st.rerun()
 
                 with col_wa:
                     tel_clean = cmd['telephone'].replace("+", "").replace(" ", "").replace("-", "")
-                    msg_relance = urllib.parse.quote(f"Bonjour {cmd['nom_client']}, concernant votre commande #{cmd['id']} chez Maman Dogo Fashion Store (Statut actuel: {nouveau_statut})...")
+                    msg_relance = urllib.parse.quote(f"Bonjour {cmd['nom_client']}, concernant votre commande #{cmd['id']} chez Maman Dogo Fashion Store (Statut: {nouveau_statut})...")
                     lien_wa_client = f"https://wa.me/{tel_clean}?text={msg_relance}"
-                    st.markdown(f'<a href="{lien_wa_client}" target="_blank" style="text-decoration:none;"><button style="background-color:#25D366; color:white; border:none; border-radius:10px; padding:10px; width:100%; font-weight:bold; cursor:pointer;">📲 Contacter le Client</button></a>', unsafe_allow_html=True)
+                    st.markdown(f'<a href="{lien_wa_client}" target="_blank" style="text-decoration:none;"><button style="background-color:#25D366; color:white; border:none; border-radius:10px; padding:10px; width:100%; font-weight:bold; cursor:pointer;">📲 WhatsApp</button></a>', unsafe_allow_html=True)
 
                 with col_del:
-                    if st.button("🗑️ Effacer", key=f"del_cmd_{cmd['id']}"):
+                    if st.button("🗑️", key=f"del_cmd_{cmd['id']}"):
                         conn = get_db_connection()
                         if conn:
                             with conn.cursor() as cur:
                                 cur.execute("DELETE FROM commandes WHERE id = %s;", (cmd['id'],))
                                 conn.commit()
                             conn.close()
-                        st.success("Commande supprimée !")
+                        st.success("Supprimée !")
                         st.rerun()
 
             st.markdown("---")
@@ -739,7 +748,7 @@ elif choix_menu == t["menu_promotions"]:
     if not articles_en_promo:
         st.info(t["vide_promo"])
     else:
-        cols = st.columns([1, 1, 1])
+        cols = st.columns(3)
         for index, produit in enumerate(articles_en_promo):
             with cols[index % 3]:
                 st.markdown('<div class="product-card">', unsafe_allow_html=True)
@@ -757,7 +766,7 @@ elif choix_menu == t["menu_promotions"]:
 
 elif choix_menu == t["menu_avis"]:
     st.subheader("⭐ Avis & Retours Expérience Clients")
-    col_form, col_liste = st.columns([1, 1])
+    col_form, col_liste = st.columns(2)
 
     with col_form:
         st.markdown("### 📝 Laisser un Avis")
@@ -790,7 +799,7 @@ elif choix_menu == t["menu_avis"]:
                     st.rerun()
 
     with col_liste:
-        st.markdown("### 💬 Avis Récents de la Communauté")
+        st.markdown("### 💬 Avis Récents")
         avis_liste = charger_avis()
         if not avis_liste:
             st.info("Aucun avis déposé pour le moment.")
@@ -802,8 +811,8 @@ elif choix_menu == t["menu_avis"]:
                         <strong>👤 {avis['nom']}</strong>
                         <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
                     </div>
-                    <small style="color:#777;">Produit : {avis['produit']} | Publié le {avis['date']}</small>
-                    <p style="margin-top:8px; color:#333;">"{avis['commentaire']}"</p>
+                    <small style="color:#777;">Produit : {avis['produit']} | {avis['date']}</small>
+                    <p style="margin-top:6px; color:#333;">"{avis['commentaire']}"</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -825,8 +834,7 @@ elif choix_menu == t["menu_vendeur"]:
                 else:
                     st.error("Identifiant ou mot de passe incorrect.")
     else:
-        # 3 SOUS-ONGLETS DONT LE SOUS-ONGLET COMMANDES
-        tab_cmds, tab_publi, tab_mes_prods = st.tabs(["📋 Commandes Clients", "➕ Publier un Article", "📦 Articles en Ligne"])
+        tab_cmds, tab_publi, tab_mes_prods = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne"])
 
         with tab_cmds:
             afficher_gestion_commandes()
@@ -848,8 +856,8 @@ elif choix_menu == t["menu_vendeur"]:
                 categorie_cible = dict_categories[cat_choisie_label]
                 sous_categorie_cible = dict_sous_categories[sub_choisie_label]
                 
-                photo_fichier = st.file_uploader("📷 Téléverser la photo du produit (PNG, JPG, JPEG)", type=["jpg", "png", "jpeg"])
-                image_url_input = st.text_input("🔗 Ou collez le lien/URL d'une image web (Optionnel)")
+                photo_fichier = st.file_uploader("📷 Photo du produit (PNG, JPG)", type=["jpg", "png", "jpeg"])
+                image_url_input = st.text_input("🔗 Ou lien image web (Optionnel)")
                 
                 valider_ajout = st.form_submit_button(t["btn_publier"], use_container_width=True)
 
@@ -897,7 +905,7 @@ elif choix_menu == t["menu_admin"]:
                 else:
                     st.error("Identifiant ou mot de passe incorrect.")
     else:
-        tab_infos, tab_produits, tab_avis_mod, tab_stats = st.tabs(["📝 Données Boutique", "📦 Gestion Catalogue", "💬 Modération Avis", "📊 Statistiques"])
+        tab_infos, tab_produits, tab_avis_mod, tab_stats = st.tabs(["📝 Boutique", "📦 Catalogue", "💬 Avis", "📊 Stats"])
 
         with tab_infos:
             infos = charger_infos_boutique()
@@ -939,7 +947,7 @@ elif choix_menu == t["menu_admin"]:
                     with c1:
                         st.write(f"**{avis['nom']}** ({avis['note']}/5⭐) : {avis['commentaire']}")
                     with c2:
-                        if st.button("🗑️ Supprimer", key=f"del_av_{avis['id']}"):
+                        if st.button("🗑️", key=f"del_av_{avis['id']}"):
                             conn = get_db_connection()
                             if conn:
                                 with conn.cursor() as cur:
@@ -951,10 +959,10 @@ elif choix_menu == t["menu_admin"]:
         with tab_stats:
             prods = charger_produits()
             valeur_stock = sum(p["prix_final"] for p in prods)
-            col_s1, col_s2, col_s3 = st.columns([1, 1, 1])
-            col_s1.metric("Total Articles Supabase", len(prods))
-            col_s2.metric("Valeur du Stock", f"{valeur_stock:,} FCFA")
-            col_s3.metric("Nombre d'avis", len(charger_avis()))
+            col_s1, col_s2, col_s3 = st.columns(3)
+            col_s1.metric("Articles", len(prods))
+            col_s2.metric("Valeur Stock", f"{valeur_stock:,} FCFA")
+            col_s3.metric("Avis", len(charger_avis()))
 
 elif choix_menu == t["menu_panier"]:
     st.subheader(t["panier_titre"])
@@ -966,7 +974,7 @@ elif choix_menu == t["menu_panier"]:
             col_img, col_desc, col_prix, col_action = st.columns([1, 2, 2, 1])
             with col_img:
                 if item.get("image_url"):
-                    st.image(item["image_url"], width=70)
+                    st.image(item["image_url"], width=60)
                 else:
                     st.write("📦")
             with col_desc:
@@ -974,13 +982,13 @@ elif choix_menu == t["menu_panier"]:
             with col_prix:
                 st.markdown(f'**{item["prix_final"]:,} FCFA**')
             with col_action:
-                if st.button("❌ " + t["btn_retirer"], key=f"suppr_panier_{idx}"):
+                if st.button("❌", key=f"suppr_panier_{idx}"):
                     st.session_state.panier.pop(idx)
                     st.rerun()
             st.markdown("---")
 
         total_general = sum(item['prix_final'] for item in st.session_state.panier)
-        st.markdown(f"### {t['total_depenses']} <span style='color:#e91e63; font-size:1.8rem; font-weight:bold;'>{total_general:,} FCFA</span>", unsafe_allow_html=True)
+        st.markdown(f"### {t['total_depenses']} <span style='color:#e91e63; font-size:1.6rem; font-weight:bold;'>{total_general:,} FCFA</span>", unsafe_allow_html=True)
 
         with st.form("form_commande_whatsapp"):
             nom_client = st.text_input("Prénom & Nom *")
@@ -996,7 +1004,6 @@ elif choix_menu == t["menu_panier"]:
                 details_str = "\n".join(lignes_commande)
                 date_cmd = datetime.now().strftime("%d/%m/%Y %H:%M")
 
-                # 1. ENREGISTREMENT DE LA COMMANDE DANS SUPABASE
                 conn = get_db_connection()
                 if conn:
                     with conn.cursor() as cur:
@@ -1007,7 +1014,6 @@ elif choix_menu == t["menu_panier"]:
                         conn.commit()
                     conn.close()
 
-                # 2. GÉNÉRATION DU LIEN WHATSAPP
                 msg_whatsapp = (
                     f"👑 *COMMANDE - {infos_boutique['nom_boutique']}*\n\n"
                     f"👤 *Client* : {nom_client.strip()}\n"
@@ -1021,31 +1027,31 @@ elif choix_menu == t["menu_panier"]:
                 st.success(t["succes_commande"])
                 st.markdown(f'<a href="{lien_whatsapp}" target="_blank" class="whatsapp-btn">📲 Envoyer ma commande sur WhatsApp</a>', unsafe_allow_html=True)
 
-# --- PIED DE PAGE (FOOTER) DE VALORISATION & BRANDING ---
+# --- PIED DE PAGE (FOOTER) DE VALORISATION ---
 st.markdown(f"""
 <div class="footer-container">
     <div class="footer-features">
         <div class="feature-box">
             <h4>✨ Qualité Supérieure</h4>
-            <p>Une sélection rigoureuse des plus beaux tissus et vêtements pour toute la famille.</p>
+            <p>Sélection rigoureuse des plus beaux articles.</p>
         </div>
         <div class="feature-box">
             <h4>🚚 Livraison Rapide</h4>
-            <p>Expédition rapide et sécurisée à Dakar et dans toutes les régions du Sénégal.</p>
+            <p>À Dakar et dans toutes les régions du Sénégal.</p>
         </div>
         <div class="feature-box">
-            <h4>💬 Service Client 24/7</h4>
-            <p>Assistance directe et personnalisée via WhatsApp pour toutes vos commandes.</p>
+            <h4>💬 Service Client</h4>
+            <p>Assistance rapide et directe via WhatsApp.</p>
         </div>
         <div class="feature-box">
-            <h4>🔒 Achat Confiant</h4>
-            <p>Paiement à la livraison et satisfaction garantie à 100%.</p>
+            <h4>🔒 Paiement Sécurisé</h4>
+            <p>Paiement à la livraison en toute confiance.</p>
         </div>
     </div>
     <div class="footer-bottom">
-        <p>👑 <strong>{infos_boutique['nom_boutique']}</strong> — Élégance, Prestige & Style</p>
+        <p>👑 <strong>{infos_boutique['nom_boutique']}</strong> — Élégance & Style</p>
         <p>📍 {infos_boutique['adresse']} | 📞 WhatsApp : <a href="https://wa.me/{infos_boutique['telephone']}" target="_blank">+{infos_boutique['telephone']}</a></p>
-        <p style="margin-top:10px; font-size:0.75rem; color:rgba(248,187,208,0.6);">© {datetime.now().year} Tous droits réservés.</p>
+        <p style="margin-top:8px; font-size:0.75rem; color:rgba(248,187,208,0.6);">© {datetime.now().year} Tous droits réservés.</p>
     </div>
 </div>
 """, unsafe_allow_html=True)
