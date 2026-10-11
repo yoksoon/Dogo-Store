@@ -29,18 +29,19 @@ try:
     DB_PASS = st.secrets["postgres"]["password"]
     
     BOUTIQUE_TEL = st.secrets["boutique"]["telephone"]
-    ADMIN_USER_CONFIG = st.secrets["admin"]["username"]
-    ADMIN_HASH_CONFIG = st.secrets["admin"]["password_hash"]
 except Exception:
     # Valeurs de secours par défaut si les secrets ne sont pas configurés en local
     DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
     DB_PORT = "5432"
     DB_NAME = "postgres"
-    DB_USER = "postgres.local"
-    DB_PASS = "local_pass"
-    BOUTIQUE_TEL = "221770000000"
-    ADMIN_USER_CONFIG = "admin"
-    ADMIN_HASH_CONFIG = "MD2026"
+    DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
+    DB_PASS = "u3eS&R-e27cYmL&"
+    BOUTIQUE_TEL = "221774729680"
+
+# Accès configurés : Nom d'utilisateur = MD2026 / Mot de passe = Dogo2026
+ADMIN_USER_CONFIG = "MD2026"
+# Hachage SHA-256 officiel de "Dogo2026"
+ADMIN_HASH_CONFIG = "853bf6819ae97669d0380cb3a0c10b7f872c918e9508d249fbf1a8d052d9a3b8"
 
 # Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
@@ -872,7 +873,9 @@ elif choix_menu == t["menu_avis"]:
 elif choix_menu == t["menu_vendeur"]:
     if not st.session_state.admin_connecte:
         with st.form("form_login_vendeur"):
-            identifiant = st.text_input("Identifiant Vendeur")
+            st.markdown("### 🔐 Connexion Espace Vendeur")
+            st.caption("Utilisateur : MD2026 | Mot de passe : Dogo2026")
+            identifiant = st.text_input("Nom d'utilisateur Vendeur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Se connecter", use_container_width=True):
                 if verifier_mot_de_passe(identifiant, mot_de_passe):
@@ -915,12 +918,15 @@ elif choix_menu == t["menu_vendeur"]:
 elif choix_menu == t["menu_admin"]:
     if not st.session_state.admin_connecte:
         with st.form("form_login_admin"):
-            identifiant = st.text_input("Admin")
+            st.markdown("### 🔐 Connexion Espace Administrateur")
+            identifiant = st.text_input("Nom d'utilisateur Administrateur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Connexion", use_container_width=True):
                 if verifier_mot_de_passe(identifiant, mot_de_passe):
                     st.session_state.admin_connecte = True
                     st.rerun()
+                else:
+                    st.error("Identifiant ou mot de passe incorrect.")
     else:
         tab_infos, tab_produits, tab_avis_mod, tab_stats = st.tabs(["📝 Boutique", "📦 Catalogue", "💬 Avis", "📊 Stats"])
         with tab_produits: afficher_gestion_catalogue()
