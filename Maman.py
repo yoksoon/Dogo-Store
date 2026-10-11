@@ -3,7 +3,6 @@ import urllib.parse
 from datetime import datetime
 import base64
 import os
-import hashlib
 
 # Importation sécurisée de psycopg2
 try:
@@ -20,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- RÉCUPÉRATION SÉCURISÉE DES SECRETS (AUCUNE INFO SENSIBLE EN CLAIR) ---
+# --- RÉCUPÉRATION SÉCURISÉE DES SECRETS (SUPABASE & BOUTIQUE) ---
 try:
     DB_HOST = st.secrets["postgres"]["host"]
     DB_PORT = st.secrets["postgres"]["port"]
@@ -30,18 +29,12 @@ try:
     
     BOUTIQUE_TEL = st.secrets["boutique"]["telephone"]
 except Exception:
-    # Valeurs de secours par défaut si les secrets ne sont pas configurés en local
     DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
     DB_PORT = "5432"
     DB_NAME = "postgres"
     DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
     DB_PASS = "u3eS&R-e27cYmL&"
     BOUTIQUE_TEL = "221774729680"
-
-# Accès configurés : Nom d'utilisateur = MD2026 / Mot de passe = Dogo2026
-ADMIN_USER_CONFIG = "MD2026"
-# Hachage SHA-256 officiel de "Dogo2026"
-ADMIN_HASH_CONFIG = "853bf6819ae97669d0380cb3a0c10b7f872c918e9508d249fbf1a8d052d9a3b8"
 
 # Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
@@ -58,13 +51,6 @@ def get_db_connection():
     except Exception as e:
         st.error(f"Erreur de connexion PostgreSQL : {e}")
         return None
-
-# Fonction de hachage sécurisé pour la vérification des identifiants
-def verifier_mot_de_passe(identifiant_saisi, mdp_saisi):
-    if identifiant_saisi != ADMIN_USER_CONFIG:
-        return False
-    mdp_hache = hashlib.sha256(mdp_saisi.encode()).hexdigest()
-    return mdp_hache == ADMIN_HASH_CONFIG
 
 # --- CONVERTISSEUR D'IMAGE EN BASE64 ---
 def encoder_image_base64(fichier_image):
@@ -874,11 +860,11 @@ elif choix_menu == t["menu_vendeur"]:
     if not st.session_state.admin_connecte:
         with st.form("form_login_vendeur"):
             st.markdown("### 🔐 Connexion Espace Vendeur")
-            st.caption("Utilisateur : MD2026 | Mot de passe : Dogo2026")
+            st.caption("Identifiant : MD2026 | Mot de passe : Dogo2026")
             identifiant = st.text_input("Nom d'utilisateur Vendeur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Se connecter", use_container_width=True):
-                if verifier_mot_de_passe(identifiant, mot_de_passe):
+                if identifiant == "MD2026" and mot_de_passe == "Dogo2026":
                     st.session_state.admin_connecte = True
                     st.success("Connexion réussie !")
                     st.rerun()
@@ -922,7 +908,7 @@ elif choix_menu == t["menu_admin"]:
             identifiant = st.text_input("Nom d'utilisateur Administrateur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Connexion", use_container_width=True):
-                if verifier_mot_de_passe(identifiant, mot_de_passe):
+                if identifiant == "MD2026" and mot_de_passe == "Dogo2026":
                     st.session_state.admin_connecte = True
                     st.rerun()
                 else:
