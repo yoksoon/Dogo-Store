@@ -128,7 +128,6 @@ init_db_automatique()
 # --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (OPTIMISÉ TOUS SUPPORTS) ---
 st.markdown("""
 <style>
-    /* Masquer les éléments natifs Streamlit encombrants sur mobile */
     header[data-testid="stHeader"] {
         display: none !important;
     }
@@ -142,7 +141,6 @@ st.markdown("""
         overflow-x: hidden;
     }
 
-    /* Cadre XXL Logo Responsive */
     .logo-xxl-container {
         display: flex;
         justify-content: center;
@@ -175,7 +173,6 @@ st.markdown("""
         object-fit: contain;
     }
 
-    /* Titres adaptatifs */
     .brand-title {
         font-size: clamp(1.5rem, 4vw, 2.8rem) !important;
         font-weight: 800;
@@ -197,7 +194,6 @@ st.markdown("""
         padding: 0 10px;
     }
 
-    /* Menu Horizontal Fluide et Tactile */
     div[data-testid="stRadio"] > div {
         flex-direction: row !important;
         justify-content: center !important;
@@ -229,7 +225,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* Cartes Produits Responsive */
     .product-card {
         background-color: #ffffff;
         border-radius: 16px;
@@ -629,35 +624,89 @@ def afficher_rayon(cat_courante):
                         
                         st.markdown('</div>', unsafe_allow_html=True)
 
-# FONCTION DE GESTION DU CATALOGUE
+# FONCTION DE GESTION ET MODIFICATION DU CATALOGUE
 def afficher_gestion_catalogue():
     prods = charger_produits()
     if not prods:
         st.info("Aucun article disponible dans Supabase.")
     else:
         for idx, prod in enumerate(prods):
-            c1, c2, c3, c4 = st.columns([1, 2, 2, 1])
-            with c1:
-                if prod.get("image_url"):
-                    st.image(prod["image_url"], width=50)
-                else:
-                    st.write("📷")
-            with c2:
-                st.write(f"**{prod['nom']}** ({prod['categorie']} > {prod['sous_categorie']})")
-                if prod.get("description"):
-                    st.caption(f"📝 {prod['description']}")
-            with c3:
-                st.write(f"{prod['prix_final']:,} FCFA")
-            with c4:
-                if st.button("🗑️", key=f"del_spb_{prod['id']}"):
-                    conn = get_db_connection()
-                    if conn:
-                        with conn.cursor() as cur:
-                            cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
-                            conn.commit()
-                        conn.close()
-                    st.success("Supprimé !")
+            with st.container():
+                c1, c2, c3, c4, c5 = st.columns([1, 2, 2, 1, 1])
+                with c1:
+                    if prod.get("image_url"):
+                        st.image(prod["image_url"], width=50)
+                    else:
+                        st.write("📷")
+                with c2:
+                    st.write(f"**{prod['nom']}** ({prod['categorie']} > {prod['sous_categorie']})")
+                    if prod.get("description"):
+                        st.caption(f"📝 {prod['description']}")
+                with c3:
+                    st.write(f"{prod['prix_final']:,} FCFA")
+                with c4:
+                    btn_edit_key = f"edit_btn_{prod['id']}"
+                    editer_clique = st.button("✏️ Modifier", key=btn_edit_key)
+                with c5:
+                    if st.button("🗑️ Suppr", key=f"del_spb_{prod['id']}"):
+                        conn = get_db_connection()
+                        if conn:
+                            with conn.cursor() as cur:
+                                cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
+                                conn.commit()
+                            conn.close()
+                        st.success("Article supprimé !")
+                        st.rerun()
+
+                # Formulaire de modification dynamique si le bouton Modifier est activé pour ce produit
+                if f"edition_active_{prod['id']}" not in st.session_state:
+                    st.session_state[f"edition_active_{prod['id']}"] = False
+
+                if editer_clique:
+                    st.session_state[f"edition_active_{prod['id']}"] = not st.session_state[f"edition_active_{prod['id']}"]
                     st.rerun()
+
+                if st.session_state.get(f"edition_active_{prod['id']}", False):
+                    with st.form(f"form_edit_prod_{prod['id']}"):
+                        st.markdown(f"#### ✏️ Modification de : {prod['nom']}")
+                        nouveau_nom = st.text_input("Nom du produit", value=prod["nom"])
+                        nouvelle_desc = st.text_area("Description & Détails", value=prod.get("description", ""))
+                        nouveau_prix = st.number_input("Prix standard (FCFA)", min_value=100, step=500, value=prod["prix_origine"])
+                        
+                        est_promo_edit = st.checkbox("Mettre en Promo ?", value=prod.get("en_promo", False))
+                        taux_promo_edit = st.slider("Remise (%)", min_value=5, max_value=70, value=prod.get("reduction", 15), step=5 if est_promo_edit else 15)
+                        
+                        cats_dispos = ["Bébé", "Enfants", "Femmes", "Hommes"]
+                        subs_dispos = ["Vêtements", "Chaussures", "Tissus", "Accessoires"]
+                        
+                        cat_edit = st.selectbox("Catégorie", cats_dispos, index=cats_dispos.index(prod["categorie"]) if prod["categorie"] in cats_dispos else 0)
+                        sub_edit = st.selectbox("Sous-catégorie", subs_dispos, index=subs_dispos.index(prod["sous_categorie"]) if prod["sous_categorie"] in subs_dispos else 0)
+                        
+                        new_img_file = st.file_uploader("Nouvelle image (Optionnel)", type=["jpg", "png", "jpeg"], key=f"img_up_{prod['id']}")
+                        new_img_url = st.text_input("Ou URL image web", value=prod.get("image_url", "") if not str(prod.get("image_url", "")).startswith("data:") else "")
+
+                        valider_modif = st.form_submit_button("💾 Enregistrer les modifications", use_container_width=True)
+
+                        if valider_modif:
+                            prix_fin = int(nouveau_prix * (1 - taux_promo_edit / 100)) if est_promo_edit else nouveau_prix
+                            img_finale = encoder_image_base64(new_img_file) if new_img_file is not None else (new_img_url.strip() if new_img_url.strip() else prod.get("image_url"))
+
+                            conn = get_db_connection()
+                            if conn:
+                                with conn.cursor() as cur:
+                                    cur.execute("""
+                                        UPDATE produits 
+                                        SET nom = %s, categorie = %s, sous_categorie = %s, prix_origine = %s, prix_final = %s, en_promo = %s, reduction = %s, description = %s, image_url = %s
+                                        WHERE id = %s;
+                                    """, (nouveau_nom.strip(), cat_edit, sub_edit, nouveau_prix, prix_fin, est_promo_edit, taux_promo_edit, nouvelle_desc.strip(), img_finale, prod['id']))
+                                    conn.commit()
+                                conn.close()
+                            
+                            st.session_state[f"edition_active_{prod['id']}"] = False
+                            st.success("Modifications enregistrées avec succès !")
+                            st.rerun()
+
+            st.markdown("---")
 
 # FONCTION D'AFFICHAGE & GESTION DES COMMANDES (POUR LE VENDEUR)
 def afficher_gestion_commandes():
