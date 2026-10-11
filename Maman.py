@@ -115,15 +115,15 @@ def init_db_automatique():
 # Exécution systématique au démarrage
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (BARRE SUPÉRIEURE MASQUÉE) ---
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (BARRE SUPÉRIEURE & FOOTER ATTRACTIF) ---
 st.markdown("""
 <style>
-    /* Masquer le header supérieur de Streamlit (Share, étoiles, menus...) */
+    /* Masquer le header supérieur natif de Streamlit */
     header[data-testid="stHeader"] {
         display: none !important;
     }
 
-    /* Masquer le pied de page 'Made with Streamlit' */
+    /* Masquer le footer natif de Streamlit */
     footer {
         visibility: hidden;
     }
@@ -132,6 +132,8 @@ st.markdown("""
         background: linear-gradient(135deg, #fff5f7 0%, #fce4ec 50%, #f8bbd0 100%);
         font-family: 'Poppins', system-ui, -apple-system, sans-serif;
     }
+
+    /* Header principal */
     .brand-title {
         font-size: clamp(1.8rem, 5vw, 3rem) !important;
         font-weight: 800;
@@ -139,17 +141,48 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         text-align: center;
-        margin-bottom: 5px;
+        margin-bottom: 2px;
         text-transform: uppercase;
         letter-spacing: 1px;
     }
     .brand-subtitle {
         text-align: center;
         color: #880e4f;
-        font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-        margin-bottom: 20px;
+        font-size: clamp(0.85rem, 2vw, 1.05rem);
+        margin-bottom: 15px;
         font-style: italic;
     }
+
+    /* Styling du Menu Horizontal en Haut */
+    div[data-testid="stRadio"] > div {
+        flex-direction: row !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+        gap: 8px !important;
+        background-color: #2c001e;
+        padding: 10px 15px;
+        border-radius: 18px;
+        box-shadow: 0 6px 18px rgba(44, 0, 30, 0.2);
+        margin-bottom: 25px;
+    }
+
+    div[data-testid="stRadio"] label {
+        background-color: rgba(255, 255, 255, 0.08) !important;
+        color: #f8bbd0 !important;
+        padding: 8px 16px !important;
+        border-radius: 12px !important;
+        border: 1px solid rgba(248, 187, 208, 0.2) !important;
+        transition: all 0.3s ease !important;
+        cursor: pointer !important;
+    }
+
+    div[data-testid="stRadio"] label:hover {
+        background-color: #e91e63 !important;
+        color: #ffffff !important;
+        transform: translateY(-2px);
+    }
+
+    /* Cards produits */
     .product-card {
         background-color: #ffffff;
         border-radius: 20px;
@@ -197,15 +230,7 @@ st.markdown("""
         font-weight: 800;
         font-size: 1.2rem;
     }
-    [data-testid="stSidebar"] {
-        background-color: #2c001e !important;
-    }
-    [data-testid="stSidebar"] p, [data-testid="stSidebar"] span, [data-testid="stSidebar"] label, [data-testid="stSidebar"] h1 {
-        color: #f8bbd0 !important;
-    }
-    [data-testid="stSidebar"] div[data-baseweb="select"] * {
-        color: #2c001e !important;
-    }
+
     .stButton>button {
         border-radius: 12px !important;
         font-weight: 600 !important;
@@ -215,6 +240,7 @@ st.markdown("""
         padding: 8px 16px !important;
         width: 100% !important;
     }
+
     .whatsapp-btn {
         display: flex;
         align-items: center;
@@ -229,6 +255,45 @@ st.markdown("""
         font-size: 1rem;
         text-decoration: none;
         margin-top: 15px;
+    }
+
+    /* FOOTER DE VALORISATION EN BAS DE PAGE */
+    .footer-container {
+        background: linear-gradient(135deg, #2c001e 0%, #4a0033 100%);
+        color: #f8bbd0;
+        padding: 35px 20px 20px 20px;
+        border-radius: 24px 24px 0 0;
+        margin-top: 50px;
+        box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.15);
+    }
+    .footer-features {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        text-align: center;
+        margin-bottom: 30px;
+        padding-bottom: 25px;
+        border-bottom: 1px solid rgba(248, 187, 208, 0.2);
+    }
+    .feature-box h4 {
+        color: #d4af37;
+        margin-bottom: 5px;
+        font-size: 1.05rem;
+    }
+    .feature-box p {
+        font-size: 0.85rem;
+        color: #fce4ec;
+        margin: 0;
+    }
+    .footer-bottom {
+        text-align: center;
+        font-size: 0.85rem;
+        color: #f8bbd0;
+    }
+    .footer-bottom a {
+        color: #d4af37;
+        text-decoration: none;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -246,7 +311,7 @@ def charger_infos_boutique():
     return {
         "nom_boutique": "Maman Dogo Fashion Store",
         "description": "L'excellence et l'élégance de la mode pour toute la famille à votre portée.",
-        "telephone": "221779419640",
+        "telephone": "221770000000",
         "adresse": "Dakar, Sénégal"
     }
 
@@ -286,20 +351,15 @@ TRADUCTIONS = {
     "FR": {
         "titre_app": f"👑 {infos_boutique['nom_boutique']}",
         "sous_titre_app": infos_boutique['description'],
-        "menu_label": "Navigation :",
-        "menu_bebe": "👶 Rayon Bébé",
-        "menu_enfants": "🧒 Rayon Enfants",
-        "menu_femmes": "👗 Rayon Femmes",
-        "menu_hommes": "👔 Rayon Hommes",
+        "menu_bebe": "👶 Bébé",
+        "menu_enfants": "🧒 Enfants",
+        "menu_femmes": "👗 Femmes",
+        "menu_hommes": "👔 Hommes",
         "menu_promotions": "🔥 Promos",
-        "menu_avis": "⭐ Avis & Retours Clients",
-        "menu_vendeur": "✨ Espace Vendeur",
-        "menu_admin": "⚙️ Espace Administrateur",
-        "menu_panier": "🛒 Mon Panier VIP",
-        "panier_sidebar_titre": "🛒 Votre Panier",
-        "articles_select": "Articles sélectionnés :",
-        "total_label": "Total estimé :",
-        "btn_vider": "Vider le panier",
+        "menu_avis": "⭐ Avis Clients",
+        "menu_vendeur": "✨ Vendeur",
+        "menu_admin": "⚙️ Admin",
+        "menu_panier": f"🛒 Panier ({len(st.session_state.panier)})",
         "sub_vetements": "👗 Vêtements",
         "sub_chaussures": "👟 Chaussures",
         "sub_tissus": "🧵 Tissus",
@@ -333,20 +393,15 @@ TRADUCTIONS = {
     "WOLOF": {
         "titre_app": f"👑 {infos_boutique['nom_boutique']}",
         "sous_titre_app": "Tar, rafet ak taru yeere ak simis yi njabot gi yepp.",
-        "menu_label": "Tannal fi nga jëm :",
-        "menu_bebe": "👶 Wàllu Liir yi (Bébé)",
-        "menu_enfants": "🧒 Wàllu Xale yi (Enfants)",
-        "menu_femmes": "👗 Wàllu Jigéen yi (Femmes)",
-        "menu_hommes": "👔 Wàllu Góor yi (Hommes)",
+        "menu_bebe": "👶 Liir yi",
+        "menu_enfants": "🧒 Xale yi",
+        "menu_femmes": "👗 Jigéen yi",
+        "menu_hommes": "👔 Góor yi",
         "menu_promotions": "🔥 Promos",
-        "menu_avis": "⭐ Xalaat & Kadduy Jëndkat yi",
-        "menu_vendeur": "✨ Palu Jaaykat bi",
-        "menu_admin": "⚙️ Palu Boroom Boutik bi",
-        "menu_panier": "🛒 Sama Saku Jënd VIP",
-        "panier_sidebar_titre": "🛒 Sa Saku Jënd",
-        "articles_select": "Limu bagas yi :",
-        "total_label": "Mbolloog xalis bi :",
-        "btn_vider": "Fay saku gi",
+        "menu_avis": "⭐ Xalaat yi",
+        "menu_vendeur": "✨ Jaaykat bi",
+        "menu_admin": "⚙️ Boroom bi",
+        "menu_panier": f"🛒 Saku ({len(st.session_state.panier)})",
         "sub_vetements": "👗 Yeere yi",
         "sub_chaussures": "👟 Dall yi",
         "sub_tissus": "🧵 Tissu yi",
@@ -379,16 +434,18 @@ TRADUCTIONS = {
     }
 }
 
-# --- BARRE LATÉRALE ---
-st.sidebar.markdown(f"# 👑 Maman Dogo")
-st.sidebar.caption("Fashion Store — Mode & Élégance")
+# --- ENTÊTE PRINCIPAL & CHOIX DE LA LANGUE ---
+col_head_title, col_head_lang = st.columns([4, 1])
 
-langue = st.sidebar.selectbox("🌐 Langue / Lakk :", ["Français", "Wolof"])
-lang_code = "FR" if langue == "Français" else "WOLOF"
-t = TRADUCTIONS[lang_code]
+with col_head_lang:
+    langue = st.selectbox("🌐 Langue :", ["Français", "Wolof"], label_visibility="collapsed")
+    lang_code = "FR" if langue == "Français" else "WOLOF"
+    t = TRADUCTIONS[lang_code]
 
-st.sidebar.markdown("---")
+st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
+st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
+# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE ---
 menu_options = [
     t["menu_bebe"],
     t["menu_enfants"],
@@ -400,23 +457,10 @@ menu_options = [
     t["menu_admin"],
     t["menu_panier"]
 ]
-choix_menu = st.sidebar.radio(t["menu_label"], menu_options)
 
-st.sidebar.markdown("---")
-st.sidebar.subheader(t["panier_sidebar_titre"])
-nb_articles = len(st.session_state.panier)
-st.sidebar.write(f"{t['articles_select']} **{nb_articles}**")
+choix_menu = st.radio("Navigation", menu_options, horizontal=True, label_visibility="collapsed")
 
-if nb_articles > 0:
-    total_panier = sum(item['prix_final'] for item in st.session_state.panier)
-    st.sidebar.write(f"{t['total_label']} **{total_panier:,} FCFA**")
-    if st.sidebar.button(t["btn_vider"], use_container_width=True):
-        st.session_state.panier = []
-        st.rerun()
-
-# --- ENTÊTE PRINCIPAL ---
-st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
-st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
+st.markdown("---")
 
 # FONCTION D'AFFICHAGE DES RAYONS
 def afficher_rayon(cat_courante):
@@ -471,6 +515,7 @@ def afficher_rayon(cat_courante):
                         if st.button(t["btn_ajouter"], key=btn_key, use_container_width=True):
                             st.session_state.panier.append(produit)
                             st.success(f"'{produit['nom']}' {t['succes_ajout']}")
+                            st.rerun()
                         
                         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -542,6 +587,7 @@ elif choix_menu == t["menu_promotions"]:
                 if st.button(t["btn_ajouter"], key=f"promo_add_{produit['id']}", use_container_width=True):
                     st.session_state.panier.append(produit)
                     st.success(f"'{produit['nom']}' {t['succes_ajout']}")
+                    st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
 elif choix_menu == t["menu_avis"]:
@@ -633,10 +679,7 @@ elif choix_menu == t["menu_vendeur"]:
                 categorie_cible = dict_categories[cat_choisie_label]
                 sous_categorie_cible = dict_sous_categories[sub_choisie_label]
                 
-                # OPTION 1 : Téléversement direct depuis l'appareil
                 photo_fichier = st.file_uploader("📷 Téléverser la photo du produit (PNG, JPG, JPEG)", type=["jpg", "png", "jpeg"])
-                
-                # Alternative URL
                 image_url_input = st.text_input("🔗 Ou collez le lien/URL d'une image web (Optionnel)")
                 
                 valider_ajout = st.form_submit_button(t["btn_publier"], use_container_width=True)
@@ -647,7 +690,6 @@ elif choix_menu == t["menu_vendeur"]:
                     else:
                         prix_final = int(prix_origine * (1 - taux_reduction / 100)) if appliquer_promo else prix_origine
                         
-                        # Priorité au fichier photo téléversé depuis l'appareil
                         if photo_fichier is not None:
                             final_image_url = encoder_image_base64(photo_fichier)
                         else:
@@ -794,3 +836,32 @@ elif choix_menu == t["menu_panier"]:
                 st.balloons()
                 st.success(t["succes_commande"])
                 st.markdown(f'<a href="{lien_whatsapp}" target="_blank" class="whatsapp-btn">📲 Envoyer ma commande sur WhatsApp</a>', unsafe_allow_html=True)
+
+# --- PIED DE PAGE (FOOTER) DE VALORISATION & BRANDING ---
+st.markdown(f"""
+<div class="footer-container">
+    <div class="footer-features">
+        <div class="feature-box">
+            <h4>✨ Qualité Supérieure</h4>
+            <p>Une sélection rigoureuse des plus beaux tissus et vêtements pour toute la famille.</p>
+        </div>
+        <div class="feature-box">
+            <h4>🚚 Livraison Rapide</h4>
+            <p>Expédition rapide et sécurisée à Dakar et dans toutes les régions du Sénégal.</p>
+        </div>
+        <div class="feature-box">
+            <h4>💬 Service Client 24/7</h4>
+            <p>Assistance directe et personnalisée via WhatsApp pour toutes vos commandes.</p>
+        </div>
+        <div class="feature-box">
+            <h4>🔒 Achat Confiant</h4>
+            <p>Paiement à la livraison et satisfaction garantie à 100%.</p>
+        </div>
+    </div>
+    <div class="footer-bottom">
+        <p>👑 <strong>{infos_boutique['nom_boutique']}</strong> — Élégance, Prestige & Style</p>
+        <p>📍 {infos_boutique['adresse']} | 📞 WhatsApp : <a href="https://wa.me/{infos_boutique['telephone']}" target="_blank">+{infos_boutique['telephone']}</a></p>
+        <p style="margin-top:10px; font-size:0.75rem; color:rgba(248,187,208,0.6);">© {datetime.now().year} Tous droits réservés.</p>
+    </div>
+</div>
+""", unsafe_allow_html=True)
