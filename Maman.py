@@ -2,6 +2,7 @@ import streamlit as st
 import urllib.parse
 from datetime import datetime
 import base64
+import os
 
 # Importation sécurisée de psycopg2
 try:
@@ -130,7 +131,7 @@ def init_db_automatique():
 # Exécution systématique au démarrage
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE & CADRE XXL DU LOGO ---
 st.markdown("""
 <style>
     /* Masquer le header supérieur natif de Streamlit */
@@ -146,6 +147,40 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #fff5f7 0%, #fce4ec 50%, #f8bbd0 100%);
         font-family: 'Poppins', system-ui, -apple-system, sans-serif;
+    }
+
+    /* Cadre XXL Super Attractif pour le Logo a.jpeg */
+    .logo-xxl-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-bottom: 20px;
+        padding: 10px;
+    }
+    .logo-xxl-frame {
+        background: linear-gradient(135deg, #d4af37 0%, #e91e63 50%, #880e4f 100%);
+        padding: 6px;
+        border-radius: 28px;
+        box-shadow: 0 12px 35px rgba(233, 30, 99, 0.25);
+        display: inline-block;
+        transition: transform 0.3s ease;
+    }
+    .logo-xxl-frame:hover {
+        transform: scale(1.02);
+    }
+    .logo-xxl-inner {
+        background-color: #ffffff;
+        border-radius: 24px;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 5px;
+    }
+    .logo-xxl-inner img {
+        border-radius: 20px;
+        max-height: 180px;
+        object-fit: contain;
     }
 
     /* Header principal */
@@ -469,6 +504,28 @@ TRADUCTIONS = {
         "recherche": "🔎 Seetbal bagas..."
     }
 }
+
+# --- AFFICHAGE DU LOGO A.JPEG DANS UN CADRE XXL TRÈS ATTRACTIF EN HAUT ---
+if os.path.exists("a.jpeg"):
+    with open("a.jpeg", "rb") as f:
+        logo_bytes = f.read()
+    logo_base64 = base64.b64encode(logo_bytes).decode()
+    st.markdown(f"""
+        <div class="logo-xxl-container">
+            <div class="logo-xxl-frame">
+                <div class="logo-xxl-inner">
+                    <img src="data:image/jpeg;base64,{logo_base64}" alt="Logo Maman Dogo">
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    # Solution de repli si le fichier a.jpeg n'est pas encore placé au même endroit
+    st.markdown("""
+        <div style="text-align: center; margin-bottom: 15px;">
+            <span style="background: linear-gradient(135deg, #d4af37, #e91e63); color: white; padding: 10px 25px; border-radius: 20px; font-weight: bold; font-size: 1.2rem; box-shadow: 0 4px 15px rgba(233,30,99,0.3);">👑 MAMAN DOGO FASHION STORE 👑</span>
+        </div>
+    """, unsafe_allow_html=True)
 
 # --- ENTÊTE PRINCIPAL & CHOIX DE LA LANGUE ---
 col_head_title, col_head_lang = st.columns([4, 1])
