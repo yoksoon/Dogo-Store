@@ -103,6 +103,21 @@ def init_db_automatique():
                 );
             """)
 
+            # 4. Table Commandes Clients
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS commandes (
+                    id SERIAL PRIMARY KEY,
+                    nom_client VARCHAR(255) NOT NULL,
+                    telephone VARCHAR(50) NOT NULL,
+                    adresse VARCHAR(255) NOT NULL,
+                    details_articles TEXT NOT NULL,
+                    montant_total INT NOT NULL,
+                    statut VARCHAR(50) DEFAULT 'En attente',
+                    date_commande VARCHAR(50) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            """)
+
             # Insertion de la configuration par défaut si vide
             cur.execute("""
                 INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
@@ -115,7 +130,7 @@ def init_db_automatique():
 # Exécution systématique au démarrage
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (BARRE SUPÉRIEURE & FOOTER ATTRACTIF) ---
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
 st.markdown("""
 <style>
     /* Masquer le header supérieur natif de Streamlit */
@@ -209,6 +224,17 @@ st.markdown("""
         margin-bottom: 12px;
         box-shadow: 0 4px 12px rgba(233, 30, 99, 0.05);
     }
+
+    /* Card commande pour le vendeur */
+    .order-card {
+        background-color: #ffffff;
+        border-radius: 16px;
+        padding: 18px;
+        border: 1px solid #f8bbd0;
+        margin-bottom: 15px;
+        box-shadow: 0 6px 15px rgba(233, 30, 99, 0.06);
+    }
+
     .promo-badge {
         background: linear-gradient(45deg, #e91e63, #ff4081);
         color: white;
@@ -335,6 +361,16 @@ def charger_avis():
         conn.close()
     return avis
 
+def charger_commandes():
+    conn = get_db_connection()
+    cmds = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM commandes ORDER BY id DESC;")
+            cmds = cur.fetchall()
+        conn.close()
+    return cmds
+
 # --- INITIALISATION SESSION ---
 if "panier" not in st.session_state:
     st.session_state.panier = []
@@ -371,8 +407,8 @@ TRADUCTIONS = {
         "sans_photo": "📷 Pas de visuel disponible",
         "btn_ajouter": "Ajouter au Panier",
         "succes_ajout": "a été ajouté à votre panier !",
-        "vendeur_titre": "✨ Espace Vendeur & Publication Directe",
-        "vendeur_desc": "Publiez vos articles de façon permanente dans Supabase.",
+        "vendeur_titre": "✨ Espace Vendeur & Gestion Boutique",
+        "vendeur_desc": "Gérez vos articles et suivez l'état des commandes de vos clients en direct.",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
         "prix_article": "Prix standard (en FCFA)",
         "est_promo": "Placer cet article en Promo ?",
@@ -387,7 +423,7 @@ TRADUCTIONS = {
         "btn_retirer": "Retirer",
         "total_depenses": "Montant Total des Achats :",
         "btn_valider": "Générer ma commande WhatsApp",
-        "succes_commande": "🎉 Commande prête ! Cliquez ci-dessous pour envoyer votre commande sur WhatsApp.",
+        "succes_commande": "🎉 Commande enregistrée ! Cliquez ci-dessous pour l'envoyer sur WhatsApp.",
         "recherche": "🔎 Rechercher un article..."
     },
     "WOLOF": {
@@ -547,6 +583,78 @@ def afficher_gestion_catalogue():
                     st.success(f"Article '{prod['nom']}' supprimé !")
                     st.rerun()
 
+# FONCTION D'AFFICHAGE & GESTION DES COMMANDES (POUR LE VENDEUR)
+def afficher_gestion_commandes():
+    cmds = charger_commandes()
+    if not cmds:
+        st.info("Aucune commande n'a été passée pour le moment.")
+    else:
+        # Filtre par statut
+        statuts_dispos = ["Toutes", "En attente", "En cours de livraison", "Livrée", "Annulée"]
+        filtre_statut = st.selectbox("🎯 Filtrer par état de commande :", statuts_dispos)
+        
+        if filtre_statut != "Toutes":
+            cmds = [c for c in cmds if c["statut"] == filtre_statut]
+
+        st.caption(f"Total : {len(cmds)} commande(s) affichée(s)")
+
+        for cmd in cmds:
+            badge_color = "#ff9800" if cmd["statut"] == "En attente" else ("#2196F3" if cmd["statut"] == "En cours de livraison" else ("#4CAF50" if cmd["statut"] == "Livrée" else "#f44336"))
+            
+            with st.container():
+                st.markdown(f"""
+                <div class="order-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <h4 style="margin:0; color:#880e4f;">📦 Commande #{cmd['id']} — {cmd['nom_client']}</h4>
+                        <span style="background-color:{badge_color}; color:white; padding:4px 12px; border-radius:12px; font-weight:bold; font-size:0.85rem;">{cmd['statut']}</span>
+                    </div>
+                    <p style="margin:6px 0; color:#555;">📅 <b>Date :</b> {cmd['date_commande']} | 📞 <b>Tél :</b> {cmd['telephone']} | 📍 <b>Adresse :</b> {cmd['adresse']}</p>
+                    <div style="background-color:#fff5f7; padding:10px; border-radius:10px; margin:8px 0;">
+                        <b>🛍️ Articles commandés :</b><br>
+                        <small>{cmd['details_articles'].replace(chr(10), '<br>')}</small>
+                    </div>
+                    <h4 style="color:#e91e63; margin-top:5px;">💰 Total : {cmd['montant_total']:,} FCFA</h4>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col_stat, col_wa, col_del = st.columns([2, 2, 1])
+                
+                with col_stat:
+                    nouveau_statut = st.selectbox(
+                        "Changer l'état :", 
+                        ["En attente", "En cours de livraison", "Livrée", "Annulée"], 
+                        index=["En attente", "En cours de livraison", "Livrée", "Annulée"].index(cmd["statut"]) if cmd["statut"] in ["En attente", "En cours de livraison", "Livrée", "Annulée"] else 0,
+                        key=f"status_select_{cmd['id']}"
+                    )
+                    if nouveau_statut != cmd["statut"]:
+                        conn = get_db_connection()
+                        if conn:
+                            with conn.cursor() as cur:
+                                cur.execute("UPDATE commandes SET statut = %s WHERE id = %s;", (nouveau_statut, cmd['id']))
+                                conn.commit()
+                            conn.close()
+                        st.success("État mis à jour !")
+                        st.rerun()
+
+                with col_wa:
+                    tel_clean = cmd['telephone'].replace("+", "").replace(" ", "").replace("-", "")
+                    msg_relance = urllib.parse.quote(f"Bonjour {cmd['nom_client']}, concernant votre commande #{cmd['id']} chez Maman Dogo Fashion Store (Statut actuel: {nouveau_statut})...")
+                    lien_wa_client = f"https://wa.me/{tel_clean}?text={msg_relance}"
+                    st.markdown(f'<a href="{lien_wa_client}" target="_blank" style="text-decoration:none;"><button style="background-color:#25D366; color:white; border:none; border-radius:10px; padding:10px; width:100%; font-weight:bold; cursor:pointer;">📲 Contacter le Client</button></a>', unsafe_allow_html=True)
+
+                with col_del:
+                    if st.button("🗑️ Effacer", key=f"del_cmd_{cmd['id']}"):
+                        conn = get_db_connection()
+                        if conn:
+                            with conn.cursor() as cur:
+                                cur.execute("DELETE FROM commandes WHERE id = %s;", (cmd['id'],))
+                                conn.commit()
+                            conn.close()
+                        st.success("Commande supprimée !")
+                        st.rerun()
+
+            st.markdown("---")
+
 # --- PAGES PRINCIPALES ---
 if choix_menu == t["menu_bebe"]:
     st.subheader("👶 Rayon Bébé")
@@ -660,7 +768,11 @@ elif choix_menu == t["menu_vendeur"]:
                 else:
                     st.error("Identifiant ou mot de passe incorrect.")
     else:
-        tab_publi, tab_mes_prods = st.tabs(["➕ Publier un Nouvel Article", "📦 Mes Articles en Ligne"])
+        # 3 SOUS-ONGLETS DONT LE SOUS-ONGLET COMMANDES
+        tab_cmds, tab_publi, tab_mes_prods = st.tabs(["📋 Commandes Clients", "➕ Publier un Article", "📦 Articles en Ligne"])
+
+        with tab_cmds:
+            afficher_gestion_commandes()
 
         with tab_publi:
             with st.form("form_vendeur", clear_on_submit=True):
@@ -823,13 +935,28 @@ elif choix_menu == t["menu_panier"]:
             if not nom_client.strip() or not tel_client.strip() or not adresse_client.strip():
                 st.error("Veuillez remplir toutes vos informations de livraison.")
             else:
-                lignes_commande = [f"{i+1}. *{item['nom']}* - {item['prix_final']:,} FCFA" for i, item in enumerate(st.session_state.panier)]
+                lignes_commande = [f"{i+1}. {item['nom']} - {item['prix_final']:,} FCFA" for i, item in enumerate(st.session_state.panier)]
+                details_str = "\n".join(lignes_commande)
+                date_cmd = datetime.now().strftime("%d/%m/%Y %H:%M")
+
+                # 1. ENREGISTREMENT DE LA COMMANDE DANS SUPABASE
+                conn = get_db_connection()
+                if conn:
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            INSERT INTO commandes (nom_client, telephone, adresse, details_articles, montant_total, statut, date_commande)
+                            VALUES (%s, %s, %s, %s, %s, 'En attente', %s);
+                        """, (nom_client.strip(), tel_client.strip(), adresse_client.strip(), details_str, total_general, date_cmd))
+                        conn.commit()
+                    conn.close()
+
+                # 2. GÉNÉRATION DU LIEN WHATSAPP
                 msg_whatsapp = (
                     f"👑 *COMMANDE - {infos_boutique['nom_boutique']}*\n\n"
                     f"👤 *Client* : {nom_client.strip()}\n"
                     f"📞 *Tél* : {tel_client.strip()}\n"
                     f"📍 *Livraison* : {adresse_client.strip()}\n\n"
-                    f"🛍️ *PANIER* :\n" + "\n".join(lignes_commande) + f"\n\n"
+                    f"🛍️ *PANIER* :\n" + details_str + f"\n\n"
                     f"💰 *TOTAL* : *{total_general:,} FCFA*"
                 )
                 lien_whatsapp = f"https://wa.me/{infos_boutique['telephone']}?text={urllib.parse.quote(msg_whatsapp)}"
