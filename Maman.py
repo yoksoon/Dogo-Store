@@ -40,7 +40,7 @@ except Exception:
     DB_PASS = "local_pass"
     BOUTIQUE_TEL = "221770000000"
     ADMIN_USER_CONFIG = "admin"
-    ADMIN_HASH_CONFIG = "853bf6819ae97669d0380cb3a0c10b7f872c918e9508d249fbf1a8d052d9a3b8"
+    ADMIN_HASH_CONFIG = "MD2026"
 
 # Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
