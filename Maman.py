@@ -87,11 +87,11 @@ def init_db_automatique():
                     produit VARCHAR(255) NOT NULL,
                     commentaire TEXT NOT NULL,
                     date VARCHAR(50) NOT NULL,
-                    publie BOOLEAN DEFAULT TRUE,
+                    publie BOOLEAN DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
-            cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT TRUE;")
+            cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT FALSE;")
             cur.execute("ALTER TABLE produits ADD COLUMN IF NOT EXISTS description TEXT;")
 
             cur.execute("""
@@ -128,7 +128,7 @@ def init_db_automatique():
 
 init_db_automatique()
 
-# --- REQUÊTES AVEC MISE EN CACHE (POUR ACCÉLÉRER L'APPLICATION) ---
+# --- REQUÊTES AVEC MISE EN CACHE ---
 @st.cache_data(ttl=60)
 def charger_infos_boutique():
     conn = get_db_connection()
@@ -189,7 +189,7 @@ def charger_commandes():
         conn.close()
     return cmds
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
+# --- STYLES CSS ---
 st.markdown("""
 <style>
     header[data-testid="stHeader"] { display: none !important; }
@@ -508,7 +508,7 @@ TRADUCTIONS = {
     }
 }
 
-# --- AFFICHAGE DU LOGO ---
+# --- LOGO ---
 if os.path.exists("a.jpeg"):
     with open("a.jpeg", "rb") as f:
         logo_bytes = f.read()
@@ -540,7 +540,7 @@ menu_options = [
 choix_menu = st.radio("Navigation", menu_options, horizontal=True, label_visibility="collapsed")
 st.markdown("---")
 
-# FONCTION AFFICHAGE RAYON
+# FONCTION RAYON
 def afficher_rayon(cat_courante):
     recherche = st.text_input(t["recherche"], placeholder="Rechercher...")
     sous_labels = [t["sub_vetements"], t["sub_chaussures"], t["sub_tissus"], t["sub_accessoires"]]
@@ -745,20 +745,22 @@ def afficher_gestion_avis():
     if not tous_les_avis:
         st.info("Aucun avis client.")
     else:
+        st.markdown("### 💬 Modération des Avis (Validation requise avant affichage)")
         for avis in tous_les_avis:
-            statut_pub = avis.get("publie", True)
-            badge_pub = "🟢 Publié" if statut_pub else "🔴 Masqué"
+            statut_pub = avis.get("publie", False)
+            badge_pub = "🟢 Publié" if statut_pub else "🔴 En attente / Masqué"
             with st.container():
                 c1, c2, c3 = st.columns([3, 1, 1])
                 with c1:
                     st.markdown(f"""
                     <div class="review-card">
                         <strong>👤 {avis['nom']} ({badge_pub})</strong> - <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
+                        <br><small>Article : {avis['produit']} | Date : {avis['date']}</small>
                         <p style="margin-top:6px; color:#333;">"{avis['commentaire']}"</p>
                     </div>
                     """, unsafe_allow_html=True)
                 with c2:
-                    nouveau_etat = st.checkbox("Publier", value=statut_pub, key=f"pub_avis_{avis['id']}")
+                    nouveau_etat = st.checkbox("Valider / Publier", value=statut_pub, key=f"pub_avis_{avis['id']}")
                     if nouveau_etat != statut_pub:
                         conn = get_db_connection()
                         if conn:
@@ -767,6 +769,7 @@ def afficher_gestion_avis():
                                 conn.commit()
                             conn.close()
                         st.cache_data.clear()
+                        st.success("Statut de l'avis mis à jour !")
                         st.rerun()
                 with c3:
                     if st.button("🗑️", key=f"del_avis_{avis['id']}"):
@@ -824,26 +827,32 @@ elif choix_menu == t["menu_avis"]:
             prods = charger_produits()
             produit_concerne = st.selectbox("Article concerné", ["Général"] + [p["nom"] for p in prods])
             commentaire = st.text_area("Commentaire")
-            if st.form_submit_button("Publier", use_container_width=True):
+            if st.form_submit_button("Soumettre mon avis", use_container_width=True):
                 if nom_client.strip() and commentaire.strip():
                     date_now = datetime.now().strftime("%d/%m/%Y")
                     conn = get_db_connection()
                     if conn:
                         with conn.cursor() as cur:
-                            cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, TRUE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
+                            # Soumis avec publie = FALSE par défaut (en attente de modération)
+                            cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, FALSE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
                             conn.commit()
                         conn.close()
                     st.cache_data.clear()
-                    st.success("Avis soumis !")
+                    st.success("Merci ! Votre avis a été transmis et sera publié après validation par la boutique.")
                     st.rerun()
     with col_liste:
-        for avis in charger_avis_publies():
-            st.markdown(f"""
-            <div class="review-card">
-                <strong>👤 {avis['nom']}</strong> - <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
-                <p style="margin-top:4px; color:#333;">"{avis['commentaire']}"</p>
-            </div>
-            """, unsafe_allow_html=True)
+        st.markdown("### 💬 Avis Validés")
+        avis_valides = charger_avis_publies()
+        if not avis_valides:
+            st.info("Aucun avis validé pour le moment.")
+        else:
+            for avis in avis_valides:
+                st.markdown(f"""
+                <div class="review-card">
+                    <strong>👤 {avis['nom']}</strong> - <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
+                    <p style="margin-top:4px; color:#333;">"{avis['commentaire']}"</p>
+                </div>
+                """, unsafe_allow_html=True)
 
 elif choix_menu == t["menu_vendeur"]:
     if not st.session_state.admin_connecte:
@@ -857,7 +866,7 @@ elif choix_menu == t["menu_vendeur"]:
                 else:
                     st.error("Identifiant incorrect.")
     else:
-        tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Avis"])
+        tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Modération Avis"])
         with tab_cmds: afficher_gestion_commandes()
         with tab_publi:
             with st.form("form_vendeur", clear_on_submit=True):
