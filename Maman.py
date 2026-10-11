@@ -73,6 +73,7 @@ def init_db_automatique():
                     prix_final INT NOT NULL,
                     en_promo BOOLEAN DEFAULT FALSE,
                     reduction INT DEFAULT 0,
+                    description TEXT,
                     image_url TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
@@ -196,7 +197,7 @@ st.markdown("""
         padding: 0 10px;
     }
 
-    /* Menu Horizontal Fluide et Tactile pour Mobile & Tablettes */
+    /* Menu Horizontal Fluide et Tactile */
     div[data-testid="stRadio"] > div {
         flex-direction: row !important;
         justify-content: center !important;
@@ -251,6 +252,15 @@ st.markdown("""
         width: 100%;
     }
 
+    .product-desc {
+        font-size: 0.85rem;
+        color: #666;
+        margin: 6px 0;
+        background-color: #fff5f7;
+        padding: 6px;
+        border-radius: 8px;
+    }
+
     .review-card {
         background-color: #ffffff;
         border-radius: 12px;
@@ -293,7 +303,6 @@ st.markdown("""
         font-size: 1.1rem;
     }
 
-    /* Boutons tactiles agrandis pour mobile */
     .stButton>button {
         border-radius: 10px !important;
         font-weight: 600 !important;
@@ -322,7 +331,6 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
     }
 
-    /* Footer de valorisation responsive */
     .footer-container {
         background: linear-gradient(135deg, #2c001e 0%, #4a0033 100%);
         color: #f8bbd0;
@@ -359,13 +367,6 @@ st.markdown("""
         color: #d4af37;
         text-decoration: none;
         font-weight: bold;
-    }
-
-    /* Ajustement responsive des colonnes Streamlit sur mobile */
-    @media(max-width: 768px) {
-        .row-widget.stHorizontal {
-            flex-direction: column !important;
-        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -456,6 +457,7 @@ TRADUCTIONS = {
         "vendeur_titre": "✨ Espace Vendeur & Gestion Boutique",
         "vendeur_desc": "Gérez vos articles et suivez l'état des commandes de vos clients en direct.",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
+        "desc_article": "Description & Détails (Tailles disponibles, couleurs, matières...)",
         "prix_article": "Prix standard (en FCFA)",
         "est_promo": "Placer cet article en Promo ?",
         "taux_promo": "Pourcentage de remise (%)",
@@ -498,6 +500,7 @@ TRADUCTIONS = {
         "vendeur_titre": "✨ Palu Jaaykat bi - Maman Dogo Fashion Store",
         "vendeur_desc": "Bindal fisii ngir feenalaat sa bagas ci lëlu jaay gi.",
         "nom_article": "Turu bagas bi (souba: Yeere liir, Robe xale...)",
+        "desc_article": "Misalin bagas bi (Taail yi am, melokaan...)",
         "prix_article": "Njeeg bu njëkk bi (ci FCFA)",
         "est_promo": "Ndax daṅa bëgg wàññi njeeg bi (Promo) ?",
         "taux_promo": "Turu wàññi gi (ci %)",
@@ -548,7 +551,7 @@ with col_head_lang:
 st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
-# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE (TOUS SUPPORTS) ---
+# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE ---
 menu_options = [
     t["menu_bebe"],
     t["menu_enfants"],
@@ -608,9 +611,13 @@ def afficher_rayon(cat_courante):
                         if produit.get("en_promo"):
                             st.markdown(f'<span class="promo-badge">PROMO -{produit["reduction"]}%</span>', unsafe_allow_html=True)
                             st.markdown(f"### {produit['nom']}")
+                            if produit.get("description"):
+                                st.markdown(f'<div class="product-desc">📝 {produit["description"]}</div>', unsafe_allow_html=True)
                             st.markdown(f'<span class="price-old">{produit["prix_origine"]:,} FCFA</span><span class="price-new">{produit["prix_final"]:,} FCFA</span>', unsafe_allow_html=True)
                         else:
                             st.markdown(f"### {produit['nom']}")
+                            if produit.get("description"):
+                                st.markdown(f'<div class="product-desc">📝 {produit["description"]}</div>', unsafe_allow_html=True)
                             st.markdown(f'<span class="price-new">{produit["prix_final"]:,} FCFA</span>', unsafe_allow_html=True)
                         
                         st.markdown("<br>", unsafe_allow_html=True)
@@ -637,6 +644,8 @@ def afficher_gestion_catalogue():
                     st.write("📷")
             with c2:
                 st.write(f"**{prod['nom']}** ({prod['categorie']} > {prod['sous_categorie']})")
+                if prod.get("description"):
+                    st.caption(f"📝 {prod['description']}")
             with c3:
                 st.write(f"{prod['prix_final']:,} FCFA")
             with c4:
@@ -756,6 +765,8 @@ elif choix_menu == t["menu_promotions"]:
                     st.image(produit["image_url"], use_container_width=True)
                 st.markdown(f'<span class="promo-badge">PROMO -{produit["reduction"]}%</span>', unsafe_allow_html=True)
                 st.markdown(f"### {produit['nom']}")
+                if produit.get("description"):
+                    st.markdown(f'<div class="product-desc">📝 {produit["description"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<span class="price-old">{produit["prix_origine"]:,} FCFA</span><span class="price-new">{produit["prix_final"]:,} FCFA</span>', unsafe_allow_html=True)
                 
                 if st.button(t["btn_ajouter"], key=f"promo_add_{produit['id']}", use_container_width=True):
@@ -842,6 +853,7 @@ elif choix_menu == t["menu_vendeur"]:
         with tab_publi:
             with st.form("form_vendeur", clear_on_submit=True):
                 nom_produit = st.text_input(t["nom_article"])
+                description_produit = st.text_area(t["desc_article"], placeholder="Ex: Tailles disponibles (S, M, L), 100% Coton, Couleurs: Rose, Blanc...")
                 prix_origine = st.number_input(t["prix_article"], min_value=100, step=500, value=10000)
                 
                 appliquer_promo = st.checkbox(t["est_promo"])
@@ -876,9 +888,9 @@ elif choix_menu == t["menu_vendeur"]:
                         if conn:
                             with conn.cursor() as cur:
                                 cur.execute("""
-                                    INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, image_url)
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s);
-                                """, (nom_produit.strip(), categorie_cible, sous_categorie_cible, prix_origine, prix_final, appliquer_promo, taux_reduction, final_image_url))
+                                    INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url)
+                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
+                                """, (nom_produit.strip(), categorie_cible, sous_categorie_cible, prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), final_image_url))
                                 conn.commit()
                             conn.close()
 
@@ -979,6 +991,8 @@ elif choix_menu == t["menu_panier"]:
                     st.write("📦")
             with col_desc:
                 st.markdown(f"**{item['nom']}**")
+                if item.get("description"):
+                    st.caption(f"📝 {item['description']}")
             with col_prix:
                 st.markdown(f'**{item["prix_final"]:,} FCFA**')
             with col_action:
@@ -1000,7 +1014,7 @@ elif choix_menu == t["menu_panier"]:
             if not nom_client.strip() or not tel_client.strip() or not adresse_client.strip():
                 st.error("Veuillez remplir toutes vos informations de livraison.")
             else:
-                lignes_commande = [f"{i+1}. {item['nom']} - {item['prix_final']:,} FCFA" for i, item in enumerate(st.session_state.panier)]
+                lignes_commande = [f"{i+1}. {item['nom']} (Détails: {item.get('description', 'N/A')}) - {item['prix_final']:,} FCFA" for i, item in enumerate(st.session_state.panier)]
                 details_str = "\n".join(lignes_commande)
                 date_cmd = datetime.now().strftime("%d/%m/%Y %H:%M")
 
