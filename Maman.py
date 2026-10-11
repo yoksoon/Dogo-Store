@@ -3,6 +3,7 @@ import urllib.parse
 from datetime import datetime
 import base64
 import os
+import hashlib
 
 # Importation sécurisée de psycopg2
 try:
@@ -19,19 +20,27 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- RÉCUPÉRATION DES SECRETS POSTGRESQL / SUPABASE ---
+# --- RÉCUPÉRATION SÉCURISÉE DES SECRETS (AUCUNE INFO SENSIBLE EN CLAIR) ---
 try:
     DB_HOST = st.secrets["postgres"]["host"]
     DB_PORT = st.secrets["postgres"]["port"]
     DB_NAME = st.secrets["postgres"]["dbname"]
     DB_USER = st.secrets["postgres"]["user"]
     DB_PASS = st.secrets["postgres"]["password"]
+    
+    BOUTIQUE_TEL = st.secrets["boutique"]["telephone"]
+    ADMIN_USER_CONFIG = st.secrets["admin"]["username"]
+    ADMIN_HASH_CONFIG = st.secrets["admin"]["password_hash"]
 except Exception:
+    # Valeurs de secours par défaut si les secrets ne sont pas configurés en local
     DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
     DB_PORT = "5432"
     DB_NAME = "postgres"
-    DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
-    DB_PASS = "u3eS&R-e27cYmL&"
+    DB_USER = "postgres.local"
+    DB_PASS = "local_pass"
+    BOUTIQUE_TEL = "221770000000"
+    ADMIN_USER_CONFIG = "admin"
+    ADMIN_HASH_CONFIG = "853bf6819ae97669d0380cb3a0c10b7f872c918e9508d249fbf1a8d052d9a3b8"
 
 # Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
@@ -48,6 +57,13 @@ def get_db_connection():
     except Exception as e:
         st.error(f"Erreur de connexion PostgreSQL : {e}")
         return None
+
+# Fonction de hachage sécurisé pour la vérification des identifiants
+def verifier_mot_de_passe(identifiant_saisi, mdp_saisi):
+    if identifiant_saisi != ADMIN_USER_CONFIG:
+        return False
+    mdp_hache = hashlib.sha256(mdp_saisi.encode()).hexdigest()
+    return mdp_hache == ADMIN_HASH_CONFIG
 
 # --- CONVERTISSEUR D'IMAGE EN BASE64 ---
 def encoder_image_base64(fichier_image):
@@ -120,9 +136,9 @@ def init_db_automatique():
 
             cur.execute("""
                 INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
-                VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', '221770000000', 'Dakar, Sénégal')
+                VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', %s, 'Dakar, Sénégal')
                 ON CONFLICT (id) DO NOTHING;
-            """)
+            """, (BOUTIQUE_TEL,))
             conn.commit()
         conn.close()
 
@@ -143,7 +159,7 @@ def charger_infos_boutique():
     return {
         "nom_boutique": "Maman Dogo Fashion Store",
         "description": "L'excellence et l'élégance de la mode pour toute la famille à votre portée.",
-        "telephone": "221770000000",
+        "telephone": BOUTIQUE_TEL,
         "adresse": "Dakar, Sénégal"
     }
 
@@ -833,7 +849,6 @@ elif choix_menu == t["menu_avis"]:
                     conn = get_db_connection()
                     if conn:
                         with conn.cursor() as cur:
-                            # Soumis avec publie = FALSE par défaut (en attente de modération)
                             cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, FALSE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
                             conn.commit()
                         conn.close()
@@ -860,11 +875,12 @@ elif choix_menu == t["menu_vendeur"]:
             identifiant = st.text_input("Identifiant Vendeur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Se connecter", use_container_width=True):
-                if identifiant == "Maman Dogo" and mot_de_passe == "Dogo2026":
+                if verifier_mot_de_passe(identifiant, mot_de_passe):
                     st.session_state.admin_connecte = True
+                    st.success("Connexion réussie !")
                     st.rerun()
                 else:
-                    st.error("Identifiant incorrect.")
+                    st.error("Identifiant ou mot de passe incorrect.")
     else:
         tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Modération Avis"])
         with tab_cmds: afficher_gestion_commandes()
@@ -902,7 +918,7 @@ elif choix_menu == t["menu_admin"]:
             identifiant = st.text_input("Admin")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Connexion", use_container_width=True):
-                if identifiant == "Maman Dogo" and mot_de_passe == "Dogo2026":
+                if verifier_mot_de_passe(identifiant, mot_de_passe):
                     st.session_state.admin_connecte = True
                     st.rerun()
     else:
