@@ -246,7 +246,7 @@ def charger_infos_boutique():
     return {
         "nom_boutique": "Maman Dogo Fashion Store",
         "description": "L'excellence et l'élégance de la mode pour toute la famille à votre portée.",
-        "telephone": "221770000000",
+        "telephone": "221779419640",
         "adresse": "Dakar, Sénégal"
     }
 
