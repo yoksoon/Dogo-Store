@@ -49,7 +49,7 @@ def get_db_connection():
         st.error(f"Erreur de connexion PostgreSQL : {e}")
         return None
 
-# --- CONVERTISSEUR D'IMAGE EN BASE64 POUR STOCKAGE PERMANENT ---
+# --- CONVERTISSEUR D'IMAGE EN BASE64 ---
 def encoder_image_base64(fichier_image):
     if fichier_image is not None:
         bytes_data = fichier_image.getvalue()
@@ -91,7 +91,6 @@ def init_db_automatique():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
-            # Sécurité pour ajouter la colonne publie si elle n'existait pas déjà
             cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT TRUE;")
             cur.execute("ALTER TABLE produits ADD COLUMN IF NOT EXISTS description TEXT;")
 
@@ -129,15 +128,72 @@ def init_db_automatique():
 
 init_db_automatique()
 
-# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE (OPTIMISÉ TOUS SUPPORTS) ---
+# --- REQUÊTES AVEC MISE EN CACHE (POUR ACCÉLÉRER L'APPLICATION) ---
+@st.cache_data(ttl=60)
+def charger_infos_boutique():
+    conn = get_db_connection()
+    res = None
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM infos_boutique WHERE id = 1;")
+            res = cur.fetchone()
+        conn.close()
+    if res:
+        return res
+    return {
+        "nom_boutique": "Maman Dogo Fashion Store",
+        "description": "L'excellence et l'élégance de la mode pour toute la famille à votre portée.",
+        "telephone": "221770000000",
+        "adresse": "Dakar, Sénégal"
+    }
+
+@st.cache_data(ttl=30)
+def charger_produits():
+    conn = get_db_connection()
+    prods = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM produits ORDER BY id DESC;")
+            prods = cur.fetchall()
+        conn.close()
+    return prods
+
+@st.cache_data(ttl=30)
+def charger_avis_publies():
+    conn = get_db_connection()
+    avis = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM avis_clients WHERE publie = TRUE ORDER BY id DESC;")
+            avis = cur.fetchall()
+        conn.close()
+    return avis
+
+def charger_tous_les_avis():
+    conn = get_db_connection()
+    avis = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM avis_clients ORDER BY id DESC;")
+            avis = cur.fetchall()
+        conn.close()
+    return avis
+
+def charger_commandes():
+    conn = get_db_connection()
+    cmds = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM commandes ORDER BY id DESC;")
+            cmds = cur.fetchall()
+        conn.close()
+    return cmds
+
+# --- STYLES CSS PERSONNALISÉS ULTRA-RESPONSIVE ---
 st.markdown("""
 <style>
-    header[data-testid="stHeader"] {
-        display: none !important;
-    }
-    footer {
-        visibility: hidden;
-    }
+    header[data-testid="stHeader"] { display: none !important; }
+    footer { visibility: hidden; }
 
     .stApp {
         background: linear-gradient(135deg, #fff5f7 0%, #fce4ec 50%, #f8bbd0 100%);
@@ -234,7 +290,6 @@ st.markdown("""
         border-radius: 16px;
         padding: 12px;
         box-shadow: 0 6px 15px rgba(233, 30, 99, 0.08);
-        transition: transform 0.2s ease;
         border: 1px solid #f8bbd0;
         text-align: center;
         display: flex;
@@ -347,85 +402,12 @@ st.markdown("""
         padding-bottom: 20px;
         border-bottom: 1px solid rgba(248, 187, 208, 0.2);
     }
-    .feature-box h4 {
-        color: #d4af37;
-        margin-bottom: 4px;
-        font-size: 0.95rem;
-    }
-    .feature-box p {
-        font-size: 0.78rem;
-        color: #fce4ec;
-        margin: 0;
-    }
-    .footer-bottom {
-        text-align: center;
-        font-size: 0.8rem;
-        color: #f8bbd0;
-    }
-    .footer-bottom a {
-        color: #d4af37;
-        text-decoration: none;
-        font-weight: bold;
-    }
+    .feature-box h4 { color: #d4af37; margin-bottom: 4px; font-size: 0.95rem; }
+    .feature-box p { font-size: 0.78rem; color: #fce4ec; margin: 0; }
+    .footer-bottom { text-align: center; font-size: 0.8rem; color: #f8bbd0; }
+    .footer-bottom a { color: #d4af37; text-decoration: none; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
-
-# --- REQUÊTES LECTURE SUPABASE ---
-def charger_infos_boutique():
-    conn = get_db_connection()
-    if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM infos_boutique WHERE id = 1;")
-            res = cur.fetchone()
-        conn.close()
-        if res:
-            return res
-    return {
-        "nom_boutique": "Maman Dogo Fashion Store",
-        "description": "L'excellence et l'élégance de la mode pour toute la famille à votre portée.",
-        "telephone": "221770000000",
-        "adresse": "Dakar, Sénégal"
-    }
-
-def charger_produits():
-    conn = get_db_connection()
-    prods = []
-    if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM produits ORDER BY id DESC;")
-            prods = cur.fetchall()
-        conn.close()
-    return prods
-
-def charger_avis_publies():
-    conn = get_db_connection()
-    avis = []
-    if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM avis_clients WHERE publie = TRUE ORDER BY id DESC;")
-            avis = cur.fetchall()
-        conn.close()
-    return avis
-
-def charger_tous_les_avis():
-    conn = get_db_connection()
-    avis = []
-    if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM avis_clients ORDER BY id DESC;")
-            avis = cur.fetchall()
-        conn.close()
-    return avis
-
-def charger_commandes():
-    conn = get_db_connection()
-    cmds = []
-    if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM commandes ORDER BY id DESC;")
-            cmds = cur.fetchall()
-        conn.close()
-    return cmds
 
 # --- INITIALISATION SESSION ---
 if "panier" not in st.session_state:
@@ -464,7 +446,6 @@ TRADUCTIONS = {
         "btn_ajouter": "Ajouter au Panier",
         "succes_ajout": "ajouté au panier !",
         "vendeur_titre": "✨ Espace Vendeur & Gestion Boutique",
-        "vendeur_desc": "Gérez vos articles et suivez l'état des commandes de vos clients en direct.",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
         "desc_article": "Description & Détails (Tailles disponibles, couleurs, matières...)",
         "prix_article": "Prix standard (en FCFA)",
@@ -480,7 +461,7 @@ TRADUCTIONS = {
         "btn_retirer": "Retirer",
         "total_depenses": "Total des Achats :",
         "btn_valider": "Commander sur WhatsApp",
-        "succes_commande": "🎉 Commande enregistrée ! Cliquez ci-dessous pour l'envoyer sur WhatsApp.",
+        "succes_commande": "🎉 Commande enregistrée !",
         "recherche": "🔎 Rechercher..."
     },
     "WOLOF": {
@@ -507,18 +488,17 @@ TRADUCTIONS = {
         "btn_ajouter": "Yobbal ci saku",
         "succes_ajout": "dugg na ci saku gi !",
         "vendeur_titre": "✨ Palu Jaaykat bi - Maman Dogo Fashion Store",
-        "vendeur_desc": "Bindal fisii ngir feenalaat sa bagas ci lëlu jaay gi.",
-        "nom_article": "Turu bagas bi (souba: Yeere liir, Robe xale...)",
-        "desc_article": "Misalin bagas bi (Taail yi am, melokaan...)",
+        "nom_article": "Turu bagas bi...",
+        "desc_article": "Misalin bagas bi...",
         "prix_article": "Njeeg bu njëkk bi (ci FCFA)",
-        "est_promo": "Ndax daṅa bëgg wàññi njeeg bi (Promo) ?",
-        "taux_promo": "Turu wàññi gi (ci %)",
-        "cat_choix": "Tannal ñimuy jaay (Bébé, Femmes...)",
-        "sub_choix": "Tannal mbolloom bagas bi (Yeere, Dall...)",
+        "est_promo": "Promo?",
+        "taux_promo": "Turu wàññi gi (%)",
+        "cat_choix": "Tannal ñimuy jaay",
+        "sub_choix": "Tannal mbolloom bagas bi",
         "btn_publier": "Feenale bagas bi",
         "err_nom": "Diisaleel turu bagas bu dëggu.",
-        "succes_publi": "Mbegte ! Sa bagas dugg na ci Supabase.",
-        "panier_titre": "🛒 Sa Saku Jënd VIP - Maman Dogo",
+        "succes_publi": "Mbegte ! Sa bagas dugg na.",
+        "panier_titre": "🛒 Sa Saku Jënd VIP",
         "panier_vide": "Sa saku jënd feesul.",
         "btn_retirer": "Dindi",
         "total_depenses": "Mbolloog xalis bi :",
@@ -528,7 +508,7 @@ TRADUCTIONS = {
     }
 }
 
-# --- AFFICHAGE DU LOGO A.JPEG DANS LE CADRE XXL ---
+# --- AFFICHAGE DU LOGO ---
 if os.path.exists("a.jpeg"):
     with open("a.jpeg", "rb") as f:
         logo_bytes = f.read()
@@ -542,16 +522,9 @@ if os.path.exists("a.jpeg"):
             </div>
         </div>
     """, unsafe_allow_html=True)
-else:
-    st.markdown("""
-        <div style="text-align: center; margin-bottom: 12px;">
-            <span style="background: linear-gradient(135deg, #d4af37, #e91e63); color: white; padding: 8px 20px; border-radius: 16px; font-weight: bold; font-size: 1.05rem; box-shadow: 0 4px 12px rgba(233,30,99,0.3);">👑 MAMAN DOGO FASHION STORE 👑</span>
-        </div>
-    """, unsafe_allow_html=True)
 
-# --- ENTÊTE PRINCIPAL & CHOIX DE LA LANGUE ---
+# --- ENTÊTE & LANGUE ---
 col_head_title, col_head_lang = st.columns([3, 1])
-
 with col_head_lang:
     langue = st.selectbox("🌐 Langue :", ["Français", "Wolof"], label_visibility="collapsed")
     lang_code = "FR" if langue == "Français" else "WOLOF"
@@ -560,24 +533,14 @@ with col_head_lang:
 st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
-# --- BARRE DE NAVIGATION HORIZONTALE EN HAUT DE PAGE ---
 menu_options = [
-    t["menu_bebe"],
-    t["menu_enfants"],
-    t["menu_femmes"],
-    t["menu_hommes"],
-    t["menu_promotions"],
-    t["menu_avis"],
-    t["menu_vendeur"],
-    t["menu_admin"],
-    t["menu_panier"]
+    t["menu_bebe"], t["menu_enfants"], t["menu_femmes"], t["menu_hommes"],
+    t["menu_promotions"], t["menu_avis"], t["menu_vendeur"], t["menu_admin"], t["menu_panier"]
 ]
-
 choix_menu = st.radio("Navigation", menu_options, horizontal=True, label_visibility="collapsed")
-
 st.markdown("---")
 
-# FONCTION D'AFFICHAGE DES RAYONS
+# FONCTION AFFICHAGE RAYON
 def afficher_rayon(cat_courante):
     recherche = st.text_input(t["recherche"], placeholder="Rechercher...")
     sous_labels = [t["sub_vetements"], t["sub_chaussures"], t["sub_tissus"], t["sub_accessoires"]]
@@ -589,10 +552,7 @@ def afficher_rayon(cat_courante):
     for j, tab_sub in enumerate(sous_tabs):
         with tab_sub:
             sous_cat_courante = SOUS_CATEGORIES[j]
-            produits_categorie = [
-                p for p in tous_produits 
-                if p["categorie"] == cat_courante and p["sous_categorie"] == sous_cat_courante
-            ]
+            produits_categorie = [p for p in tous_produits if p["categorie"] == cat_courante and p["sous_categorie"] == sous_cat_courante]
             
             if recherche:
                 produits_categorie = [p for p in produits_categorie if recherche.lower() in p["nom"].lower()]
@@ -604,7 +564,6 @@ def afficher_rayon(cat_courante):
                 for index, produit in enumerate(produits_categorie):
                     with cols[index % 3]:
                         st.markdown('<div class="product-card">', unsafe_allow_html=True)
-                        
                         if produit.get("image_url"):
                             st.image(produit["image_url"], use_container_width=True)
                         else:
@@ -635,16 +594,15 @@ def afficher_rayon(cat_courante):
                             st.session_state.panier.append(produit)
                             st.success(f"'{produit['nom']}' {t['succes_ajout']}")
                             st.rerun()
-                        
                         st.markdown('</div>', unsafe_allow_html=True)
 
-# FONCTION DE GESTION ET MODIFICATION DU CATALOGUE
+# FONCTION CATALOGUE
 def afficher_gestion_catalogue():
     prods = charger_produits()
     if not prods:
         st.info("Aucun article disponible dans Supabase.")
     else:
-        for idx, prod in enumerate(prods):
+        for prod in prods:
             with st.container():
                 c1, c2, c3, c4, c5 = st.columns([1, 2, 2, 1, 1])
                 with c1:
@@ -669,6 +627,7 @@ def afficher_gestion_catalogue():
                                 cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
                                 conn.commit()
                             conn.close()
+                        st.cache_data.clear()
                         st.success("Article supprimé !")
                         st.rerun()
 
@@ -685,18 +644,16 @@ def afficher_gestion_catalogue():
                         nouveau_nom = st.text_input("Nom du produit", value=prod["nom"])
                         nouvelle_desc = st.text_area("Description & Détails", value=prod.get("description", ""))
                         nouveau_prix = st.number_input("Prix standard (FCFA)", min_value=100, step=500, value=prod["prix_origine"])
-                        
                         est_promo_edit = st.checkbox("Mettre en Promo ?", value=prod.get("en_promo", False))
-                        taux_promo_edit = st.slider("Remise (%)", min_value=5, max_value=70, value=prod.get("reduction", 15), step=5 if est_promo_edit else 15)
+                        taux_promo_edit = st.slider("Remise (%)", min_value=5, max_value=70, value=prod.get("reduction", 15), step=5)
                         
                         cats_dispos = ["Bébé", "Enfants", "Femmes", "Hommes"]
                         subs_dispos = ["Vêtements", "Chaussures", "Tissus", "Accessoires"]
-                        
                         cat_edit = st.selectbox("Catégorie", cats_dispos, index=cats_dispos.index(prod["categorie"]) if prod["categorie"] in cats_dispos else 0)
                         sub_edit = st.selectbox("Sous-catégorie", subs_dispos, index=subs_dispos.index(prod["sous_categorie"]) if prod["sous_categorie"] in subs_dispos else 0)
                         
                         new_img_file = st.file_uploader("Nouvelle image (Optionnel)", type=["jpg", "png", "jpeg"], key=f"img_up_{prod['id']}")
-                        new_img_url = st.text_input("Ou URL image web", value=prod.get("image_url", "") if not str(prod.get("image_url", "")).startswith("data:") else "")
+                        new_img_url = st.text_input("Ou URL image web", value="")
 
                         valider_modif = st.form_submit_button("💾 Enregistrer les modifications", use_container_width=True)
 
@@ -716,12 +673,12 @@ def afficher_gestion_catalogue():
                                 conn.close()
                             
                             st.session_state[f"edition_active_{prod['id']}"] = False
-                            st.success("Modifications enregistrées avec succès !")
+                            st.cache_data.clear()
+                            st.success("Modifications enregistrées !")
                             st.rerun()
-
             st.markdown("---")
 
-# FONCTION D'AFFICHAGE & GESTION DES COMMANDES (POUR LE VENDEUR)
+# FONCTION COMMANDES
 def afficher_gestion_commandes():
     cmds = charger_commandes()
     if not cmds:
@@ -729,37 +686,30 @@ def afficher_gestion_commandes():
     else:
         statuts_dispos = ["Toutes", "En attente", "En cours de livraison", "Livrée", "Annulée"]
         filtre_statut = st.selectbox("🎯 Filtrer par état :", statuts_dispos)
-        
         if filtre_statut != "Toutes":
             cmds = [c for c in cmds if c["statut"] == filtre_statut]
 
-        st.caption(f"Total : {len(cmds)} commande(s)")
-
         for cmd in cmds:
             badge_color = "#ff9800" if cmd["statut"] == "En attente" else ("#2196F3" if cmd["statut"] == "En cours de livraison" else ("#4CAF50" if cmd["statut"] == "Livrée" else "#f44336"))
-            
             with st.container():
                 st.markdown(f"""
                 <div class="order-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:5px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
                         <h4 style="margin:0; color:#880e4f;">📦 Commande #{cmd['id']} — {cmd['nom_client']}</h4>
                         <span style="background-color:{badge_color}; color:white; padding:3px 10px; border-radius:10px; font-weight:bold; font-size:0.8rem;">{cmd['statut']}</span>
                     </div>
                     <p style="margin:5px 0; color:#555; font-size:0.85rem;">📅 {cmd['date_commande']} | 📞 {cmd['telephone']} | 📍 {cmd['adresse']}</p>
                     <div style="background-color:#fff5f7; padding:8px; border-radius:8px; margin:6px 0;">
-                        <b>🛍️ Articles :</b><br>
-                        <small>{cmd['details_articles'].replace(chr(10), '<br>')}</small>
+                        <b>🛍️ Articles :</b><br><small>{cmd['details_articles'].replace(chr(10), '<br>')}</small>
                     </div>
                     <h4 style="color:#e91e63; margin-top:4px;">💰 Total : {cmd['montant_total']:,} FCFA</h4>
                 </div>
                 """, unsafe_allow_html=True)
 
                 col_stat, col_wa, col_del = st.columns([2, 2, 1])
-                
                 with col_stat:
                     nouveau_statut = st.selectbox(
-                        "État :", 
-                        ["En attente", "En cours de livraison", "Livrée", "Annulée"], 
+                        "État :", ["En attente", "En cours de livraison", "Livrée", "Annulée"], 
                         index=["En attente", "En cours de livraison", "Livrée", "Annulée"].index(cmd["statut"]) if cmd["statut"] in ["En attente", "En cours de livraison", "Livrée", "Annulée"] else 0,
                         key=f"status_select_{cmd['id']}"
                     )
@@ -772,13 +722,11 @@ def afficher_gestion_commandes():
                             conn.close()
                         st.success("Mis à jour !")
                         st.rerun()
-
                 with col_wa:
                     tel_clean = cmd['telephone'].replace("+", "").replace(" ", "").replace("-", "")
-                    msg_relance = urllib.parse.quote(f"Bonjour {cmd['nom_client']}, concernant votre commande #{cmd['id']} chez Maman Dogo Fashion Store (Statut: {nouveau_statut})...")
+                    msg_relance = urllib.parse.quote(f"Bonjour {cmd['nom_client']}, concernant votre commande #{cmd['id']}...")
                     lien_wa_client = f"https://wa.me/{tel_clean}?text={msg_relance}"
-                    st.markdown(f'<a href="{lien_wa_client}" target="_blank" style="text-decoration:none;"><button style="background-color:#25D366; color:white; border:none; border-radius:10px; padding:10px; width:100%; font-weight:bold; cursor:pointer;">📲 WhatsApp</button></a>', unsafe_allow_html=True)
-
+                    st.markdown(f'<a href="{lien_wa_client}" target="_blank" style="text-decoration:none;"><button style="background-color:#25D366; color:white; border-radius:10px; padding:10px; width:100%; font-weight:bold; cursor:pointer;">📲 WhatsApp</button></a>', unsafe_allow_html=True)
                 with col_del:
                     if st.button("🗑️", key=f"del_cmd_{cmd['id']}"):
                         conn = get_db_connection()
@@ -789,35 +737,28 @@ def afficher_gestion_commandes():
                             conn.close()
                         st.success("Supprimée !")
                         st.rerun()
-
             st.markdown("---")
 
-# FONCTION DE GESTION ET MODÉRATION DES AVIS (ESPACE VENDEUR)
+# FONCTION GESTION AVIS
 def afficher_gestion_avis():
     tous_les_avis = charger_tous_les_avis()
     if not tous_les_avis:
-        st.info("Aucun avis client n'a été soumis.")
+        st.info("Aucun avis client.")
     else:
-        st.markdown("### 💬 Modération des Avis Clients")
         for avis in tous_les_avis:
             statut_pub = avis.get("publie", True)
             badge_pub = "🟢 Publié" if statut_pub else "🔴 Masqué"
-            
             with st.container():
                 c1, c2, c3 = st.columns([3, 1, 1])
                 with c1:
                     st.markdown(f"""
                     <div class="review-card">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <strong>👤 {avis['nom']} ({badge_pub})</strong>
-                            <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
-                        </div>
-                        <small style="color:#777;">Produit : {avis['produit']} | {avis['date']}</small>
+                        <strong>👤 {avis['nom']} ({badge_pub})</strong> - <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
                         <p style="margin-top:6px; color:#333;">"{avis['commentaire']}"</p>
                     </div>
                     """, unsafe_allow_html=True)
                 with c2:
-                    nouveau_etat = st.checkbox("Publier sur le site", value=statut_pub, key=f"pub_avis_{avis['id']}")
+                    nouveau_etat = st.checkbox("Publier", value=statut_pub, key=f"pub_avis_{avis['id']}")
                     if nouveau_etat != statut_pub:
                         conn = get_db_connection()
                         if conn:
@@ -825,45 +766,34 @@ def afficher_gestion_avis():
                                 cur.execute("UPDATE avis_clients SET publie = %s WHERE id = %s;", (nouveau_etat, avis['id']))
                                 conn.commit()
                             conn.close()
-                        st.success("Statut mis à jour !")
+                        st.cache_data.clear()
                         st.rerun()
                 with c3:
-                    if st.button("🗑️ Supprimer", key=f"del_avis_{avis['id']}"):
+                    if st.button("🗑️", key=f"del_avis_{avis['id']}"):
                         conn = get_db_connection()
                         if conn:
                             with conn.cursor() as cur:
                                 cur.execute("DELETE FROM avis_clients WHERE id = %s;", (avis['id'],))
                                 conn.commit()
                             conn.close()
-                        st.success("Avis supprimé !")
+                        st.cache_data.clear()
                         st.rerun()
             st.markdown("---")
 
-# --- PAGES PRINCIPALES ---
+# --- NAVIGATION PRINCIPALE ---
 if choix_menu == t["menu_bebe"]:
-    st.subheader("👶 Rayon Bébé")
     afficher_rayon("Bébé")
-
 elif choix_menu == t["menu_enfants"]:
-    st.subheader("🧒 Rayon Enfants")
     afficher_rayon("Enfants")
-
 elif choix_menu == t["menu_femmes"]:
-    st.subheader("👗 Rayon Femmes")
     afficher_rayon("Femmes")
-
 elif choix_menu == t["menu_hommes"]:
-    st.subheader("👔 Rayon Hommes")
     afficher_rayon("Hommes")
-
 elif choix_menu == t["menu_promotions"]:
     st.subheader(t["promo_titre"])
-    st.write(t["promo_desc"])
-
     tous_produits = charger_produits()
     tous_avis = charger_avis_publies()
     articles_en_promo = [p for p in tous_produits if p.get("en_promo")]
-
     if not articles_en_promo:
         st.info(t["vide_promo"])
     else:
@@ -878,292 +808,142 @@ elif choix_menu == t["menu_promotions"]:
                 if produit.get("description"):
                     st.markdown(f'<div class="product-desc">📝 {produit["description"]}</div>', unsafe_allow_html=True)
                 st.markdown(f'<span class="price-old">{produit["prix_origine"]:,} FCFA</span><span class="price-new">{produit["prix_final"]:,} FCFA</span>', unsafe_allow_html=True)
-                
                 if st.button(t["btn_ajouter"], key=f"promo_add_{produit['id']}", use_container_width=True):
                     st.session_state.panier.append(produit)
-                    st.success(f"'{produit['nom']}' {t['succes_ajout']}")
+                    st.success(t["succes_ajout"])
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
 
 elif choix_menu == t["menu_avis"]:
     st.subheader("⭐ Avis & Retours Expérience Clients")
     col_form, col_liste = st.columns(2)
-
     with col_form:
-        st.markdown("### 📝 Laisser un Avis")
         with st.form("form_avis", clear_on_submit=True):
             nom_client = st.text_input("Votre Prénom & Nom")
-            note_client = st.slider("Votre Note", min_value=1, max_value=5, value=5)
-            
+            note_client = st.slider("Note", 1, 5, 5)
             prods = charger_produits()
-            tous_produits_noms = ["Général"] + [p["nom"] for p in prods]
-            produit_concerne = st.selectbox("Article concerné", tous_produits_noms)
-            commentaire = st.text_area("Votre commentaire")
-            
-            submit_avis = st.form_submit_button("Publier mon avis", use_container_width=True)
-
-            if submit_avis:
-                if not nom_client.strip() or not commentaire.strip():
-                    st.error("Veuillez remplir tous les champs.")
-                else:
+            produit_concerne = st.selectbox("Article concerné", ["Général"] + [p["nom"] for p in prods])
+            commentaire = st.text_area("Commentaire")
+            if st.form_submit_button("Publier", use_container_width=True):
+                if nom_client.strip() and commentaire.strip():
                     date_now = datetime.now().strftime("%d/%m/%Y")
                     conn = get_db_connection()
                     if conn:
                         with conn.cursor() as cur:
-                            cur.execute("""
-                                INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie)
-                                VALUES (%s, %s, %s, %s, %s, TRUE);
-                            """, (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
+                            cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, TRUE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
                             conn.commit()
                         conn.close()
-                    st.success("Merci ! Votre avis a été soumis avec succès.")
+                    st.cache_data.clear()
+                    st.success("Avis soumis !")
                     st.rerun()
-
     with col_liste:
-        st.markdown("### 💬 Avis Validés")
-        avis_liste = charger_avis_publies()
-        if not avis_liste:
-            st.info("Aucun avis validé pour le moment.")
-        else:
-            for avis in avis_liste:
-                st.markdown(f"""
-                <div class="review-card">
-                    <div style="display:flex; justify-content:space-between;">
-                        <strong>👤 {avis['nom']}</strong>
-                        <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
-                    </div>
-                    <small style="color:#777;">Produit : {avis['produit']} | {avis['date']}</small>
-                    <p style="margin-top:6px; color:#333;">"{avis['commentaire']}"</p>
-                </div>
-                """, unsafe_allow_html=True)
+        for avis in charger_avis_publies():
+            st.markdown(f"""
+            <div class="review-card">
+                <strong>👤 {avis['nom']}</strong> - <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
+                <p style="margin-top:4px; color:#333;">"{avis['commentaire']}"</p>
+            </div>
+            """, unsafe_allow_html=True)
 
 elif choix_menu == t["menu_vendeur"]:
-    st.subheader(t["vendeur_titre"])
-
     if not st.session_state.admin_connecte:
-        st.info("🔒 Connexion sécurisée requise")
         with st.form("form_login_vendeur"):
-            identifiant = st.text_input("Nom d'utilisateur Vendeur / Admin")
+            identifiant = st.text_input("Identifiant Vendeur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
-            btn_connexion = st.form_submit_button("Se connecter", use_container_width=True)
-
-            if btn_connexion:
+            if st.form_submit_button("Se connecter", use_container_width=True):
                 if identifiant == "Maman Dogo" and mot_de_passe == "Dogo2026":
                     st.session_state.admin_connecte = True
-                    st.success("Connexion réussie !")
                     st.rerun()
                 else:
-                    st.error("Identifiant ou mot de passe incorrect.")
+                    st.error("Identifiant incorrect.")
     else:
-        # AJOUT DU SOUS-ONGLET AVIS CLIENTS DANS L'ESPACE VENDEUR
-        tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Avis Clients"])
-
-        with tab_cmds:
-            afficher_gestion_commandes()
-
+        tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Avis"])
+        with tab_cmds: afficher_gestion_commandes()
         with tab_publi:
             with st.form("form_vendeur", clear_on_submit=True):
                 nom_produit = st.text_input(t["nom_article"])
-                description_produit = st.text_area(t["desc_article"], placeholder="Ex: Tailles disponibles (S, M, L), 100% Coton, Couleurs: Rose, Blanc...")
+                description_produit = st.text_area(t["desc_article"])
                 prix_origine = st.number_input(t["prix_article"], min_value=100, step=500, value=10000)
-                
                 appliquer_promo = st.checkbox(t["est_promo"])
-                taux_reduction = st.slider(t["taux_promo"], min_value=5, max_value=70, value=15, step=5) if appliquer_promo else 0
+                taux_reduction = st.slider(t["taux_promo"], 5, 70, 15, 5) if appliquer_promo else 0
+                cat_choisie = st.selectbox(t["cat_choix"], list({"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}.keys()))
+                sub_choisie = st.selectbox(t["sub_choix"], list({"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}.keys()))
+                photo_fichier = st.file_uploader("Photo", type=["jpg", "png", "jpeg"])
                 
-                dict_categories = {"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}
-                dict_sous_categories = {t["sub_vetements"]: "Vêtements", t["sub_chaussures"]: "Chaussures", t["sub_tissus"]: "Tissus", t["sub_accessoires"]: "Accessoires"}
-
-                cat_choisie_label = st.selectbox(t["cat_choix"], list(dict_categories.keys()))
-                sub_choisie_label = st.selectbox(t["sub_choix"], list(dict_sous_categories.keys()))
-                
-                categorie_cible = dict_categories[cat_choisie_label]
-                sous_categorie_cible = dict_sous_categories[sub_choisie_label]
-                
-                photo_fichier = st.file_uploader("📷 Photo du produit (PNG, JPG)", type=["jpg", "png", "jpeg"])
-                image_url_input = st.text_input("🔗 Ou lien image web (Optionnel)")
-                
-                valider_ajout = st.form_submit_button(t["btn_publier"], use_container_width=True)
-
-                if valider_ajout:
-                    if not nom_produit.strip():
-                        st.error(t["err_nom"])
-                    else:
+                if st.form_submit_button(t["btn_publier"], use_container_width=True):
+                    if nom_produit.strip():
                         prix_final = int(prix_origine * (1 - taux_reduction / 100)) if appliquer_promo else prix_origine
-                        
-                        if photo_fichier is not None:
-                            final_image_url = encoder_image_base64(photo_fichier)
-                        else:
-                            final_image_url = image_url_input.strip()
-
+                        img_url = encoder_image_base64(photo_fichier) if photo_fichier else ""
                         conn = get_db_connection()
                         if conn:
                             with conn.cursor() as cur:
-                                cur.execute("""
-                                    INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url)
-                                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);
-                                """, (nom_produit.strip(), categorie_cible, sous_categorie_cible, prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), final_image_url))
+                                cur.execute("INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);", 
+                                            (nom_produit.strip(), {"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}[cat_choisie], {"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[sub_choisie], prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), img_url))
                                 conn.commit()
                             conn.close()
-
+                        st.cache_data.clear()
                         st.success(t["succes_publi"])
                         st.rerun()
-
-        with tab_mes_prods:
-            afficher_gestion_catalogue()
-
-        with tab_avis_g:
-            afficher_gestion_avis()
+        with tab_mes_prods: afficher_gestion_catalogue()
+        with tab_avis_g: afficher_gestion_avis()
 
 elif choix_menu == t["menu_admin"]:
-    st.subheader("🔐 Espace Administrateur - Maman Dogo")
-
     if not st.session_state.admin_connecte:
-        st.info("Veuillez vous identifier.")
         with st.form("form_login_admin"):
-            identifiant = st.text_input("Nom d'utilisateur Administrateur")
+            identifiant = st.text_input("Admin")
             mot_de_passe = st.text_input("Mot de passe", type="password")
-            btn_connexion = st.form_submit_button("Se connecter", use_container_width=True)
-
-            if btn_connexion:
+            if st.form_submit_button("Connexion", use_container_width=True):
                 if identifiant == "Maman Dogo" and mot_de_passe == "Dogo2026":
                     st.session_state.admin_connecte = True
                     st.rerun()
-                else:
-                    st.error("Identifiant ou mot de passe incorrect.")
     else:
         tab_infos, tab_produits, tab_avis_mod, tab_stats = st.tabs(["📝 Boutique", "📦 Catalogue", "💬 Avis", "📊 Stats"])
-
-        with tab_infos:
-            infos = charger_infos_boutique()
-            with st.form("form_infos_boutique"):
-                nouveau_nom = st.text_input("Nom de la boutique", value=infos["nom_boutique"])
-                nouvelle_desc = st.text_area("Description", value=infos["description"])
-                nouveau_tel = st.text_input("Téléphone WhatsApp", value=infos["telephone"])
-                nouvelle_adresse = st.text_input("Adresse", value=infos["adresse"])
-
-                save_infos = st.form_submit_button("Enregistrer", use_container_width=True)
-                if save_infos:
-                    conn = get_db_connection()
-                    if conn:
-                        with conn.cursor() as cur:
-                            cur.execute("""
-                                INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
-                                VALUES (1, %s, %s, %s, %s)
-                                ON CONFLICT (id) DO UPDATE SET
-                                    nom_boutique = EXCLUDED.nom_boutique,
-                                    description = EXCLUDED.description,
-                                    telephone = EXCLUDED.telephone,
-                                    adresse = EXCLUDED.adresse;
-                            """, (nouveau_nom, nouvelle_desc, nouveau_tel.replace("+", "").replace(" ", ""), nouvelle_adresse))
-                            conn.commit()
-                        conn.close()
-                    st.success("Modifications enregistrées !")
-                    st.rerun()
-
-        with tab_produits:
-            afficher_gestion_catalogue()
-
-        with tab_avis_mod:
-            afficher_gestion_avis()
-
+        with tab_produits: afficher_gestion_catalogue()
+        with tab_avis_mod: afficher_gestion_avis()
         with tab_stats:
             prods = charger_produits()
-            valeur_stock = sum(p["prix_final"] for p in prods)
-            col_s1, col_s2, col_s3 = st.columns(3)
-            col_s1.metric("Articles", len(prods))
-            col_s2.metric("Valeur Stock", f"{valeur_stock:,} FCFA")
-            col_s3.metric("Avis", len(charger_tous_les_avis()))
+            st.metric("Articles", len(prods))
 
 elif choix_menu == t["menu_panier"]:
     st.subheader(t["panier_titre"])
-
     if not st.session_state.panier:
         st.info(t["panier_vide"])
     else:
         for idx, item in enumerate(st.session_state.panier):
-            col_img, col_desc, col_prix, col_action = st.columns([1, 2, 2, 1])
-            with col_img:
-                if item.get("image_url"):
-                    st.image(item["image_url"], width=60)
-                else:
-                    st.write("📦")
-            with col_desc:
-                st.markdown(f"**{item['nom']}**")
-                if item.get("description"):
-                    st.caption(f"📝 {item['description']}")
-            with col_prix:
-                st.markdown(f'**{item["prix_final"]:,} FCFA**')
-            with col_action:
+            c1, c2, c3, c4 = st.columns([1, 2, 2, 1])
+            with c1:
+                if item.get("image_url"): st.image(item["image_url"], width=60)
+            with c2: st.markdown(f"**{item['nom']}**")
+            with c3: st.markdown(f"**{item['prix_final']:,} FCFA**")
+            with c4:
                 if st.button("❌", key=f"suppr_panier_{idx}"):
                     st.session_state.panier.pop(idx)
                     st.rerun()
             st.markdown("---")
 
         total_general = sum(item['prix_final'] for item in st.session_state.panier)
-        st.markdown(f"### {t['total_depenses']} <span style='color:#e91e63; font-size:1.6rem; font-weight:bold;'>{total_general:,} FCFA</span>", unsafe_allow_html=True)
+        st.markdown(f"### Total : {total_general:,} FCFA")
 
         with st.form("form_commande_whatsapp"):
             nom_client = st.text_input("Prénom & Nom *")
             tel_client = st.text_input("Téléphone *")
-            adresse_client = st.text_input("Adresse de livraison *")
-            valider_cmd = st.form_submit_button(t["btn_valider"], use_container_width=True)
+            adresse_client = st.text_input("Adresse *")
+            if st.form_submit_button(t["btn_valider"], use_container_width=True):
+                if nom_client.strip() and tel_client.strip() and adresse_client.strip():
+                    lignes_commande = [f"- {item['nom']} ({item['prix_final']:,} FCFA)" for item in st.session_state.panier]
+                    details_str = "\n".join(lignes_commande)
+                    date_cmd = datetime.now().strftime("%d/%m/%Y %H:%M")
+                    
+                    conn = get_db_connection()
+                    if conn:
+                        with conn.cursor() as cur:
+                            cur.execute("INSERT INTO commandes (nom_client, telephone, adresse, details_articles, montant_total, statut, date_commande) VALUES (%s, %s, %s, %s, %s, 'En attente', %s);", 
+                                        (nom_client.strip(), tel_client.strip(), adresse_client.strip(), details_str, total_general, date_cmd))
+                            conn.commit()
+                        conn.close()
 
-        if valider_cmd:
-            if not nom_client.strip() or not tel_client.strip() or not adresse_client.strip():
-                st.error("Veuillez remplir toutes vos informations de livraison.")
-            else:
-                lignes_commande = [f"{i+1}. {item['nom']} (Détails: {item.get('description', 'N/A')}) - {item['prix_final']:,} FCFA" for i, item in enumerate(st.session_state.panier)]
-                details_str = "\n".join(lignes_commande)
-                date_cmd = datetime.now().strftime("%d/%m/%Y %H:%M")
-
-                conn = get_db_connection()
-                if conn:
-                    with conn.cursor() as cur:
-                        cur.execute("""
-                            INSERT INTO commandes (nom_client, telephone, adresse, details_articles, montant_total, statut, date_commande)
-                            VALUES (%s, %s, %s, %s, %s, 'En attente', %s);
-                        """, (nom_client.strip(), tel_client.strip(), adresse_client.strip(), details_str, total_general, date_cmd))
-                        conn.commit()
-                    conn.close()
-
-                msg_whatsapp = (
-                    f"👑 *COMMANDE - {infos_boutique['nom_boutique']}*\n\n"
-                    f"👤 *Client* : {nom_client.strip()}\n"
-                    f"📞 *Tél* : {tel_client.strip()}\n"
-                    f"📍 *Livraison* : {adresse_client.strip()}\n\n"
-                    f"🛍️ *PANIER* :\n" + details_str + f"\n\n"
-                    f"💰 *TOTAL* : *{total_general:,} FCFA*"
-                )
-                lien_whatsapp = f"https://wa.me/{infos_boutique['telephone']}?text={urllib.parse.quote(msg_whatsapp)}"
-                st.balloons()
-                st.success(t["succes_commande"])
-                st.markdown(f'<a href="{lien_whatsapp}" target="_blank" class="whatsapp-btn">📲 Envoyer ma commande sur WhatsApp</a>', unsafe_allow_html=True)
-
-# --- PIED DE PAGE (FOOTER) DE VALORISATION ---
-st.markdown(f"""
-<div class="footer-container">
-    <div class="footer-features">
-        <div class="feature-box">
-            <h4>✨ Qualité Supérieure</h4>
-            <p>Sélection rigoureuse des plus beaux articles.</p>
-        </div>
-        <div class="feature-box">
-            <h4>🚚 Livraison Rapide</h4>
-            <p>À Dakar et dans toutes les régions du Sénégal.</p>
-        </div>
-        <div class="feature-box">
-            <h4>💬 Service Client</h4>
-            <p>Assistance rapide et directe via WhatsApp.</p>
-        </div>
-        <div class="feature-box">
-            <h4>🔒 Paiement Sécurisé</h4>
-            <p>Paiement à la livraison en toute confiance.</p>
-        </div>
-    </div>
-    <div class="footer-bottom">
-        <p>👑 <strong>{infos_boutique['nom_boutique']}</strong> — Élégance & Style</p>
-        <p>📍 {infos_boutique['adresse']} | 📞 WhatsApp : <a href="https://wa.me/{infos_boutique['telephone']}" target="_blank">+{infos_boutique['telephone']}</a></p>
-        <p style="margin-top:8px; font-size:0.75rem; color:rgba(248,187,208,0.6);">© {datetime.now().year} Tous droits réservés.</p>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+                    msg = f"👑 Commande Maman Dogo\nClient: {nom_client}\nTél: {tel_client}\nAdresse: {adresse_client}\n\n{details_str}\n\nTotal: {total_general:,} FCFA"
+                    lien_wa = f"https://wa.me/{infos_boutique['telephone']}?text={urllib.parse.quote(msg)}"
+                    st.balloons()
+                    st.success(t["succes_commande"])
+                    st.markdown(f'<a href="{lien_wa}" target="_blank" class="whatsapp-btn">📲 Envoyer sur WhatsApp</a>', unsafe_allow_html=True)
