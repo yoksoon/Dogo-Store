@@ -840,7 +840,7 @@ elif choix_menu == t["menu_avis"]:
                             conn.commit()
                         conn.close()
                     st.cache_data.clear()
-                    st.success("Merci ! Votre avis a été transmis et sera publié après validation par la boutique.")
+                    st.success("Merci ! Votre avis a été transmitted et sera publié après validation par la boutique.")
                     st.rerun()
     with col_liste:
         st.markdown("### 💬 Avis Validés")
@@ -860,7 +860,6 @@ elif choix_menu == t["menu_vendeur"]:
     if not st.session_state.admin_connecte:
         with st.form("form_login_vendeur"):
             st.markdown("### 🔐 Connexion Espace Vendeur")
-            st.caption("Identifiant : MD2026 | Mot de passe : Dogo2026")
             identifiant = st.text_input("Nom d'utilisateur Vendeur")
             mot_de_passe = st.text_input("Mot de passe", type="password")
             if st.form_submit_button("Se connecter", use_container_width=True):
