@@ -87,9 +87,13 @@ def init_db_automatique():
                     produit VARCHAR(255) NOT NULL,
                     commentaire TEXT NOT NULL,
                     date VARCHAR(50) NOT NULL,
+                    publie BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 );
             """)
+            # Sécurité pour ajouter la colonne publie si elle n'existait pas déjà
+            cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT TRUE;")
+            cur.execute("ALTER TABLE produits ADD COLUMN IF NOT EXISTS description TEXT;")
 
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS infos_boutique (
@@ -393,7 +397,17 @@ def charger_produits():
         conn.close()
     return prods
 
-def charger_avis():
+def charger_avis_publies():
+    conn = get_db_connection()
+    avis = []
+    if conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM avis_clients WHERE publie = TRUE ORDER BY id DESC;")
+            avis = cur.fetchall()
+        conn.close()
+    return avis
+
+def charger_tous_les_avis():
     conn = get_db_connection()
     avis = []
     if conn:
@@ -570,7 +584,7 @@ def afficher_rayon(cat_courante):
     sous_tabs = st.tabs(sous_labels)
 
     tous_produits = charger_produits()
-    tous_avis = charger_avis()
+    tous_avis = charger_avis_publies()
 
     for j, tab_sub in enumerate(sous_tabs):
         with tab_sub:
@@ -658,7 +672,6 @@ def afficher_gestion_catalogue():
                         st.success("Article supprimé !")
                         st.rerun()
 
-                # Formulaire de modification dynamique si le bouton Modifier est activé pour ce produit
                 if f"edition_active_{prod['id']}" not in st.session_state:
                     st.session_state[f"edition_active_{prod['id']}"] = False
 
@@ -779,6 +792,53 @@ def afficher_gestion_commandes():
 
             st.markdown("---")
 
+# FONCTION DE GESTION ET MODÉRATION DES AVIS (ESPACE VENDEUR)
+def afficher_gestion_avis():
+    tous_les_avis = charger_tous_les_avis()
+    if not tous_les_avis:
+        st.info("Aucun avis client n'a été soumis.")
+    else:
+        st.markdown("### 💬 Modération des Avis Clients")
+        for avis in tous_les_avis:
+            statut_pub = avis.get("publie", True)
+            badge_pub = "🟢 Publié" if statut_pub else "🔴 Masqué"
+            
+            with st.container():
+                c1, c2, c3 = st.columns([3, 1, 1])
+                with c1:
+                    st.markdown(f"""
+                    <div class="review-card">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <strong>👤 {avis['nom']} ({badge_pub})</strong>
+                            <span style="color:#d4af37;">{"⭐" * avis['note']}</span>
+                        </div>
+                        <small style="color:#777;">Produit : {avis['produit']} | {avis['date']}</small>
+                        <p style="margin-top:6px; color:#333;">"{avis['commentaire']}"</p>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with c2:
+                    nouveau_etat = st.checkbox("Publier sur le site", value=statut_pub, key=f"pub_avis_{avis['id']}")
+                    if nouveau_etat != statut_pub:
+                        conn = get_db_connection()
+                        if conn:
+                            with conn.cursor() as cur:
+                                cur.execute("UPDATE avis_clients SET publie = %s WHERE id = %s;", (nouveau_etat, avis['id']))
+                                conn.commit()
+                            conn.close()
+                        st.success("Statut mis à jour !")
+                        st.rerun()
+                with c3:
+                    if st.button("🗑️ Supprimer", key=f"del_avis_{avis['id']}"):
+                        conn = get_db_connection()
+                        if conn:
+                            with conn.cursor() as cur:
+                                cur.execute("DELETE FROM avis_clients WHERE id = %s;", (avis['id'],))
+                                conn.commit()
+                            conn.close()
+                        st.success("Avis supprimé !")
+                        st.rerun()
+            st.markdown("---")
+
 # --- PAGES PRINCIPALES ---
 if choix_menu == t["menu_bebe"]:
     st.subheader("👶 Rayon Bébé")
@@ -801,6 +861,7 @@ elif choix_menu == t["menu_promotions"]:
     st.write(t["promo_desc"])
 
     tous_produits = charger_produits()
+    tous_avis = charger_avis_publies()
     articles_en_promo = [p for p in tous_produits if p.get("en_promo")]
 
     if not articles_en_promo:
@@ -850,19 +911,19 @@ elif choix_menu == t["menu_avis"]:
                     if conn:
                         with conn.cursor() as cur:
                             cur.execute("""
-                                INSERT INTO avis_clients (nom, note, produit, commentaire, date)
-                                VALUES (%s, %s, %s, %s, %s);
+                                INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie)
+                                VALUES (%s, %s, %s, %s, %s, TRUE);
                             """, (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
                             conn.commit()
                         conn.close()
-                    st.success("Merci ! Votre avis a été enregistré.")
+                    st.success("Merci ! Votre avis a été soumis avec succès.")
                     st.rerun()
 
     with col_liste:
-        st.markdown("### 💬 Avis Récents")
-        avis_liste = charger_avis()
+        st.markdown("### 💬 Avis Validés")
+        avis_liste = charger_avis_publies()
         if not avis_liste:
-            st.info("Aucun avis déposé pour le moment.")
+            st.info("Aucun avis validé pour le moment.")
         else:
             for avis in avis_liste:
                 st.markdown(f"""
@@ -894,7 +955,8 @@ elif choix_menu == t["menu_vendeur"]:
                 else:
                     st.error("Identifiant ou mot de passe incorrect.")
     else:
-        tab_cmds, tab_publi, tab_mes_prods = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne"])
+        # AJOUT DU SOUS-ONGLET AVIS CLIENTS DANS L'ESPACE VENDEUR
+        tab_cmds, tab_publi, tab_mes_prods, tab_avis_g = st.tabs(["📋 Commandes", "➕ Publier", "📦 En Ligne", "⭐ Avis Clients"])
 
         with tab_cmds:
             afficher_gestion_commandes()
@@ -949,6 +1011,9 @@ elif choix_menu == t["menu_vendeur"]:
         with tab_mes_prods:
             afficher_gestion_catalogue()
 
+        with tab_avis_g:
+            afficher_gestion_avis()
+
 elif choix_menu == t["menu_admin"]:
     st.subheader("🔐 Espace Administrateur - Maman Dogo")
 
@@ -999,23 +1064,7 @@ elif choix_menu == t["menu_admin"]:
             afficher_gestion_catalogue()
 
         with tab_avis_mod:
-            avis_liste = charger_avis()
-            if not avis_liste:
-                st.info("Aucun avis déposé.")
-            else:
-                for avis in avis_liste:
-                    c1, c2 = st.columns([3, 1])
-                    with c1:
-                        st.write(f"**{avis['nom']}** ({avis['note']}/5⭐) : {avis['commentaire']}")
-                    with c2:
-                        if st.button("🗑️", key=f"del_av_{avis['id']}"):
-                            conn = get_db_connection()
-                            if conn:
-                                with conn.cursor() as cur:
-                                    cur.execute("DELETE FROM avis_clients WHERE id = %s;", (avis['id'],))
-                                    conn.commit()
-                                conn.close()
-                            st.rerun()
+            afficher_gestion_avis()
 
         with tab_stats:
             prods = charger_produits()
@@ -1023,7 +1072,7 @@ elif choix_menu == t["menu_admin"]:
             col_s1, col_s2, col_s3 = st.columns(3)
             col_s1.metric("Articles", len(prods))
             col_s2.metric("Valeur Stock", f"{valeur_stock:,} FCFA")
-            col_s3.metric("Avis", len(charger_avis()))
+            col_s3.metric("Avis", len(charger_tous_les_avis()))
 
 elif choix_menu == t["menu_panier"]:
     st.subheader(t["panier_titre"])
