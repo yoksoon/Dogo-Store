@@ -19,6 +19,9 @@ st.set_page_config(
     layout="wide"
 )
 
+# Numéro par défaut pour WhatsApp
+TEL_PAR_DEFAUT = "221774729680"
+
 # --- RÉCUPÉRATION SÉCURISÉE DES SECRETS (SUPABASE & BOUTIQUE) ---
 try:
     DB_HOST = st.secrets["postgres"]["host"]
@@ -27,14 +30,14 @@ try:
     DB_USER = st.secrets["postgres"]["user"]
     DB_PASS = st.secrets["postgres"]["password"]
     
-    BOUTIQUE_TEL = st.secrets["boutique"]["telephone"]
+    BOUTIQUE_TEL = st.secrets.get("boutique", {}).get("telephone", TEL_PAR_DEFAUT)
 except Exception:
     DB_HOST = "aws-0-eu-west-1.pooler.supabase.com"
     DB_PORT = "5432"
     DB_NAME = "postgres"
     DB_USER = "postgres.wqmxbbjzaytwwsanlckq"
     DB_PASS = "u3eS&R-e27cYmL&"
-    BOUTIQUE_TEL = "221774729680"
+    BOUTIQUE_TEL = TEL_PAR_DEFAUT
 
 # Fonction d'obtention de la connexion à la base de données
 def get_db_connection():
@@ -124,7 +127,7 @@ def init_db_automatique():
             cur.execute("""
                 INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
                 VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', %s, 'Dakar, Sénégal')
-                ON CONFLICT (id) DO NOTHING;
+                ON CONFLICT (id) DO UPDATE SET telephone = EXCLUDED.telephone;
             """, (BOUTIQUE_TEL,))
             conn.commit()
         conn.close()
@@ -840,7 +843,7 @@ elif choix_menu == t["menu_avis"]:
                             conn.commit()
                         conn.close()
                     st.cache_data.clear()
-                    st.success("Merci ! Votre avis a été transmitted et sera publié après validation par la boutique.")
+                    st.success("Merci ! Votre avis a été transmis et sera publié après validation par la boutique.")
                     st.rerun()
     with col_liste:
         st.markdown("### 💬 Avis Validés")
@@ -959,7 +962,11 @@ elif choix_menu == t["menu_panier"]:
                         conn.close()
 
                     msg = f"👑 Commande Maman Dogo\nClient: {nom_client}\nTél: {tel_client}\nAdresse: {adresse_client}\n\n{details_str}\n\nTotal: {total_general:,} FCFA"
-                    lien_wa = f"https://wa.me/{infos_boutique['telephone']}?text={urllib.parse.quote(msg)}"
+                    
+                    # Formate le numéro WhatsApp pour s'assurer qu'il soit bien au format international
+                    num_whatsapp_destination = TEL_PAR_DEFAUT
+                    lien_wa = f"https://wa.me/{num_whatsapp_destination}?text={urllib.parse.quote(msg)}"
+                    
                     st.balloons()
                     st.success(t["succes_commande"])
                     st.markdown(f'<a href="{lien_wa}" target="_blank" class="whatsapp-btn">📲 Envoyer sur WhatsApp</a>', unsafe_allow_html=True)
