@@ -79,7 +79,6 @@ def encoder_image_base64_optimisee(fichier_image, target_size=(600, 600)):
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
             
-            # Recadrage centré propre pour garder un ratio uniforme
             image_fit = ImageOps.fit(image, target_size, Image.Resampling.LANCZOS)
             
             buffer = io.BytesIO()
@@ -329,7 +328,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* CARTE PRODUIT & STYLE IMAGE HARMONISÉ */
     .product-card {
         background-color: #ffffff;
         border-radius: 16px;
@@ -538,6 +536,8 @@ TRADUCTIONS = {
         "succes_publi": "Mbegte ! Sa bagas dugg na.",
         "panier_titre": "🛒 Sa Saku Jënd VIP",
         "panier_vide": "Sa saku jënd feesul.",
+        "btn_retirer": "Dindi",
+        "total_depenses": "Mbolloog xalis bi :",
         "btn_valider": "Yöbbal ci WhatsApp",
         "succes_commande": "🎉 Jënd gi pare na !",
         "recherche": "🔎 Seetbal..."
@@ -601,7 +601,6 @@ def afficher_rayon(cat_courante):
                     with cols[index % 3]:
                         st.markdown('<div class="product-card">', unsafe_allow_html=True)
                         
-                        # Affichage de l'image de produit unifiée
                         if produit.get("image_url"):
                             st.markdown(f'''
                                 <div class="product-img-wrapper">
@@ -940,8 +939,8 @@ elif choix_menu == t["menu_vendeur"]:
                 prix_origine = st.number_input(t["prix_article"], min_value=100, step=500, value=10000)
                 appliquer_promo = st.checkbox(t["est_promo"])
                 taux_reduction = st.slider(t["taux_promo"], 5, 70, 15, 5) if appliquer_promo else 0
-                cat_choisie = st.selectbox(t["cat_choix"], list({"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}.keys()))
-                sub_choisie = st.selectbox(t["sub_choix"], list({"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[.keys()))
+                cat_choisie = st.selectbox(t["cat_choix"], ["Bébé", "Enfants", "Femmes", "Hommes"])
+                sub_choisie = st.selectbox(t["sub_choix"], ["Vêtements", "Chaussures", "Tissus", "Accessoires"])
                 photo_fichier = st.file_uploader("Photo", type=["jpg", "png", "jpeg"])
                 
                 if st.form_submit_button(t["btn_publier"], use_container_width=True):
@@ -953,7 +952,7 @@ elif choix_menu == t["menu_vendeur"]:
                             try:
                                 with conn.cursor() as cur:
                                     cur.execute("INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);", 
-                                                (nom_produit.strip(), {"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}[cat_choisie], {"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[sub_choisie], prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), img_url))
+                                                (nom_produit.strip(), cat_choisie, sub_choisie, prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), img_url))
                                     conn.commit()
                             finally:
                                 release_db_connection(conn)
