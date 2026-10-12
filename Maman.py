@@ -3,13 +3,16 @@ import urllib.parse
 from datetime import datetime
 import base64
 import os
+import io
+from PIL import Image
 
-# Importation sécurisée de psycopg2
+# Importation sécurisée de psycopg2 et du pool de connexions
 try:
     import psycopg2
+    from psycopg2.pool import SimpleConnectionPool
     from psycopg2.extras import RealDictCursor
 except ModuleNotFoundError:
-    st.error("❌ Le module 'psycopg2' n'est pas installé. Veuillez installer 'psycopg2-binary'.")
+    st.error("❌ Le module 'psycopg2' ou 'Pillow' est manquant. Veuillez installer 'psycopg2-binary' et 'Pillow'.")
     st.stop()
 
 # Configuration de la page
@@ -39,98 +42,120 @@ except Exception:
     DB_PASS = "u3eS&R-e27cYmL&"
     BOUTIQUE_TEL = TEL_PAR_DEFAUT
 
-# Fonction d'obtention de la connexion à la base de données
+# --- POOL DE CONNEXIONS OPTIMISÉ ---
+@st.cache_resource
+def get_db_pool():
+    return SimpleConnectionPool(
+        minconn=1,
+        maxconn=10,
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASS
+    )
+
 def get_db_connection():
     try:
-        conn = psycopg2.connect(
-            host=DB_HOST,
-            port=DB_PORT,
-            dbname=DB_NAME,
-            user=DB_USER,
-            password=DB_PASS,
-            cursor_factory=RealDictCursor
-        )
-        return conn
+        pool = get_db_pool()
+        return pool.getconn()
     except Exception as e:
         st.error(f"Erreur de connexion PostgreSQL : {e}")
         return None
 
-# --- CONVERTISSEUR D'IMAGE EN BASE64 ---
-def encoder_image_base64(fichier_image):
+def release_db_connection(conn):
+    if conn:
+        try:
+            pool = get_db_pool()
+            pool.putconn(conn)
+        except Exception:
+            pass
+
+# --- COMPRESSION ET CONVERSION D'IMAGE OPTIMISÉE ---
+def encoder_image_base64_optimisee(fichier_image, max_size=(500, 500)):
     if fichier_image is not None:
-        bytes_data = fichier_image.getvalue()
-        base64_str = base64.b64encode(bytes_data).decode()
-        mime_type = fichier_image.type
-        return f"data:{mime_type};base64,{base64_str}"
+        try:
+            image = Image.open(fichier_image)
+            if image.mode in ("RGBA", "P"):
+                image = image.convert("RGB")
+            image.thumbnail(max_size)
+            buffer = io.BytesIO()
+            image.save(buffer, format="JPEG", quality=75, optimize=True)
+            base64_str = base64.b64encode(buffer.getvalue()).decode()
+            return f"data:image/jpeg;base64,{base64_str}"
+        except Exception:
+            return ""
     return ""
 
 # --- INITIALISATION AUTOMATIQUE DE LA STRUCTURE DB ---
 def init_db_automatique():
     conn = get_db_connection()
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS produits (
-                    id SERIAL PRIMARY KEY,
-                    nom VARCHAR(255) NOT NULL,
-                    categorie VARCHAR(100) NOT NULL,
-                    sous_categorie VARCHAR(100) NOT NULL,
-                    prix_origine INT NOT NULL,
-                    prix_final INT NOT NULL,
-                    en_promo BOOLEAN DEFAULT FALSE,
-                    reduction INT DEFAULT 0,
-                    description TEXT,
-                    image_url TEXT,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS avis_clients (
-                    id SERIAL PRIMARY KEY,
-                    nom VARCHAR(255) NOT NULL,
-                    note INT NOT NULL,
-                    produit VARCHAR(255) NOT NULL,
-                    commentaire TEXT NOT NULL,
-                    date VARCHAR(50) NOT NULL,
-                    publie BOOLEAN DEFAULT FALSE,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
-            cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT FALSE;")
-            cur.execute("ALTER TABLE produits ADD COLUMN IF NOT EXISTS description TEXT;")
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS produits (
+                        id SERIAL PRIMARY KEY,
+                        nom VARCHAR(255) NOT NULL,
+                        categorie VARCHAR(100) NOT NULL,
+                        sous_categorie VARCHAR(100) NOT NULL,
+                        prix_origine INT NOT NULL,
+                        prix_final INT NOT NULL,
+                        en_promo BOOLEAN DEFAULT FALSE,
+                        reduction INT DEFAULT 0,
+                        description TEXT,
+                        image_url TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS avis_clients (
+                        id SERIAL PRIMARY KEY,
+                        nom VARCHAR(255) NOT NULL,
+                        note INT NOT NULL,
+                        produit VARCHAR(255) NOT NULL,
+                        commentaire TEXT NOT NULL,
+                        date VARCHAR(50) NOT NULL,
+                        publie BOOLEAN DEFAULT FALSE,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
+                cur.execute("ALTER TABLE avis_clients ADD COLUMN IF NOT EXISTS publie BOOLEAN DEFAULT FALSE;")
+                cur.execute("ALTER TABLE produits ADD COLUMN IF NOT EXISTS description TEXT;")
 
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS infos_boutique (
-                    id INT PRIMARY KEY DEFAULT 1,
-                    nom_boutique VARCHAR(255),
-                    description TEXT,
-                    telephone VARCHAR(50),
-                    adresse VARCHAR(255)
-                );
-            """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS infos_boutique (
+                        id INT PRIMARY KEY DEFAULT 1,
+                        nom_boutique VARCHAR(255),
+                        description TEXT,
+                        telephone VARCHAR(50),
+                        adresse VARCHAR(255)
+                    );
+                """)
 
-            cur.execute("""
-                CREATE TABLE IF NOT EXISTS commandes (
-                    id SERIAL PRIMARY KEY,
-                    nom_client VARCHAR(255) NOT NULL,
-                    telephone VARCHAR(50) NOT NULL,
-                    adresse VARCHAR(255) NOT NULL,
-                    details_articles TEXT NOT NULL,
-                    montant_total INT NOT NULL,
-                    statut VARCHAR(50) DEFAULT 'En attente',
-                    date_commande VARCHAR(50) NOT NULL,
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                );
-            """)
+                cur.execute("""
+                    CREATE TABLE IF NOT EXISTS commandes (
+                        id SERIAL PRIMARY KEY,
+                        nom_client VARCHAR(255) NOT NULL,
+                        telephone VARCHAR(50) NOT NULL,
+                        adresse VARCHAR(255) NOT NULL,
+                        details_articles TEXT NOT NULL,
+                        montant_total INT NOT NULL,
+                        statut VARCHAR(50) DEFAULT 'En attente',
+                        date_commande VARCHAR(50) NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                """)
 
-            cur.execute("""
-                INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
-                VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', %s, 'Dakar, Sénégal')
-                ON CONFLICT (id) DO UPDATE SET telephone = EXCLUDED.telephone;
-            """, (BOUTIQUE_TEL,))
-            conn.commit()
-        conn.close()
+                cur.execute("""
+                    INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
+                    VALUES (1, 'Maman Dogo Fashion Store', 'L''excellence et l''élégance de la mode pour toute la famille à votre portée.', %s, 'Dakar, Sénégal')
+                    ON CONFLICT (id) DO UPDATE SET telephone = EXCLUDED.telephone;
+                """, (BOUTIQUE_TEL,))
+                conn.commit()
+        finally:
+            release_db_connection(conn)
 
 init_db_automatique()
 
@@ -140,10 +165,12 @@ def charger_infos_boutique():
     conn = get_db_connection()
     res = None
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM infos_boutique WHERE id = 1;")
-            res = cur.fetchone()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM infos_boutique WHERE id = 1;")
+                res = cur.fetchone()
+        finally:
+            release_db_connection(conn)
     if res:
         return res
     return {
@@ -158,10 +185,12 @@ def charger_produits():
     conn = get_db_connection()
     prods = []
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM produits ORDER BY id DESC;")
-            prods = cur.fetchall()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM produits ORDER BY id DESC;")
+                prods = cur.fetchall()
+        finally:
+            release_db_connection(conn)
     return prods
 
 @st.cache_data(ttl=30)
@@ -169,30 +198,36 @@ def charger_avis_publies():
     conn = get_db_connection()
     avis = []
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM avis_clients WHERE publie = TRUE ORDER BY id DESC;")
-            avis = cur.fetchall()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM avis_clients WHERE publie = TRUE ORDER BY id DESC;")
+                avis = cur.fetchall()
+        finally:
+            release_db_connection(conn)
     return avis
 
 def charger_tous_les_avis():
     conn = get_db_connection()
     avis = []
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM avis_clients ORDER BY id DESC;")
-            avis = cur.fetchall()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM avis_clients ORDER BY id DESC;")
+                avis = cur.fetchall()
+        finally:
+            release_db_connection(conn)
     return avis
 
 def charger_commandes():
     conn = get_db_connection()
     cmds = []
     if conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM commandes ORDER BY id DESC;")
-            cmds = cur.fetchall()
-        conn.close()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT * FROM commandes ORDER BY id DESC;")
+                cmds = cur.fetchall()
+        finally:
+            release_db_connection(conn)
     return cmds
 
 # --- STYLES CSS ---
@@ -390,28 +425,6 @@ st.markdown("""
         margin-top: 12px;
         box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
     }
-
-    .footer-container {
-        background: linear-gradient(135deg, #2c001e 0%, #4a0033 100%);
-        color: #f8bbd0;
-        padding: 25px 15px 15px 15px;
-        border-radius: 20px 20px 0 0;
-        margin-top: 40px;
-        box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.15);
-    }
-    .footer-features {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-        gap: 15px;
-        text-align: center;
-        margin-bottom: 20px;
-        padding-bottom: 20px;
-        border-bottom: 1px solid rgba(248, 187, 208, 0.2);
-    }
-    .feature-box h4 { color: #d4af37; margin-bottom: 4px; font-size: 0.95rem; }
-    .feature-box p { font-size: 0.78rem; color: #fce4ec; margin: 0; }
-    .footer-bottom { text-align: center; font-size: 0.8rem; color: #f8bbd0; }
-    .footer-bottom a { color: #d4af37; text-decoration: none; font-weight: bold; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -445,13 +458,11 @@ TRADUCTIONS = {
         "sub_tissus": "🧵 Tissus",
         "sub_accessoires": "👜 Accessoires",
         "promo_titre": "🔥 Espace Promos",
-        "promo_desc": "Profitez de nos prix réduits sur une sélection de pièces magnifiques.",
         "vide_cat": "Aucun article disponible actuellement dans ce rayon",
         "vide_promo": "Aucun produit en promo pour le moment.",
         "sans_photo": "📷 Pas de visuel",
         "btn_ajouter": "Ajouter au Panier",
         "succes_ajout": "ajouté au panier !",
-        "vendeur_titre": "✨ Espace Vendeur & Gestion Boutique",
         "nom_article": "Nom du produit (ex: Ensemble Bébé, Robe Fille...)",
         "desc_article": "Description & Détails (Tailles disponibles, couleurs, matières...)",
         "prix_article": "Prix standard (en FCFA)",
@@ -460,12 +471,9 @@ TRADUCTIONS = {
         "cat_choix": "Choisir le public cible",
         "sub_choix": "Choisir le type d'article",
         "btn_publier": "Mettre en ligne",
-        "err_nom": "Veuillez entrer un nom d'article valide.",
         "succes_publi": "Succès ! Votre création est enregistrée.",
         "panier_titre": "🛒 Mon Panier d'Achat VIP",
         "panier_vide": "Votre panier est vide.",
-        "btn_retirer": "Retirer",
-        "total_depenses": "Total des Achats :",
         "btn_valider": "Commander sur WhatsApp",
         "succes_commande": "🎉 Commande enregistrée !",
         "recherche": "🔎 Rechercher..."
@@ -487,13 +495,11 @@ TRADUCTIONS = {
         "sub_tissus": "🧵 Tissu yi",
         "sub_accessoires": "👜 Bagas yi",
         "promo_titre": "🔥 Wàññi Njeeg (Promos)",
-        "promo_desc": "Jëfandikool sunu njeeg yi wàññiku ngir jënd lu rafet !",
         "vide_cat": "Amagul benn bagas léegi ci fi",
         "vide_promo": "Amagul benn bagas bu wàññiku njeeg bi léegi.",
         "sans_photo": "📷 Amul nataal",
         "btn_ajouter": "Yobbal ci saku",
         "succes_ajout": "dugg na ci saku gi !",
-        "vendeur_titre": "✨ Palu Jaaykat bi - Maman Dogo Fashion Store",
         "nom_article": "Turu bagas bi...",
         "desc_article": "Misalin bagas bi...",
         "prix_article": "Njeeg bu njëkk bi (ci FCFA)",
@@ -502,12 +508,9 @@ TRADUCTIONS = {
         "cat_choix": "Tannal ñimuy jaay",
         "sub_choix": "Tannal mbolloom bagas bi",
         "btn_publier": "Feenale bagas bi",
-        "err_nom": "Diisaleel turu bagas bu dëggu.",
         "succes_publi": "Mbegte ! Sa bagas dugg na.",
         "panier_titre": "🛒 Sa Saku Jënd VIP",
         "panier_vide": "Sa saku jënd feesul.",
-        "btn_retirer": "Dindi",
-        "total_depenses": "Mbolloog xalis bi :",
         "btn_valider": "Yöbbal ci WhatsApp",
         "succes_commande": "🎉 Jënd gi pare na !",
         "recherche": "🔎 Seetbal..."
@@ -629,11 +632,13 @@ def afficher_gestion_catalogue():
                     if st.button("🗑️ Suppr", key=f"del_spb_{prod['id']}"):
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
-                                conn.commit()
-                            conn.close()
-                        st.cache_data.clear()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("DELETE FROM produits WHERE id = %s;", (prod['id'],))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
+                        charger_produits.clear()
                         st.success("Article supprimé !")
                         st.rerun()
 
@@ -665,21 +670,23 @@ def afficher_gestion_catalogue():
 
                         if valider_modif:
                             prix_fin = int(nouveau_prix * (1 - taux_promo_edit / 100)) if est_promo_edit else nouveau_prix
-                            img_finale = encoder_image_base64(new_img_file) if new_img_file is not None else (new_img_url.strip() if new_img_url.strip() else prod.get("image_url"))
+                            img_finale = encoder_image_base64_optimisee(new_img_file) if new_img_file is not None else (new_img_url.strip() if new_img_url.strip() else prod.get("image_url"))
 
                             conn = get_db_connection()
                             if conn:
-                                with conn.cursor() as cur:
-                                    cur.execute("""
-                                        UPDATE produits 
-                                        SET nom = %s, categorie = %s, sous_categorie = %s, prix_origine = %s, prix_final = %s, en_promo = %s, reduction = %s, description = %s, image_url = %s
-                                        WHERE id = %s;
-                                    """, (nouveau_nom.strip(), cat_edit, sub_edit, nouveau_prix, prix_fin, est_promo_edit, taux_promo_edit, nouvelle_desc.strip(), img_finale, prod['id']))
-                                    conn.commit()
-                                conn.close()
+                                try:
+                                    with conn.cursor() as cur:
+                                        cur.execute("""
+                                            UPDATE produits 
+                                            SET nom = %s, categorie = %s, sous_categorie = %s, prix_origine = %s, prix_final = %s, en_promo = %s, reduction = %s, description = %s, image_url = %s
+                                            WHERE id = %s;
+                                        """, (nouveau_nom.strip(), cat_edit, sub_edit, nouveau_prix, prix_fin, est_promo_edit, taux_promo_edit, nouvelle_desc.strip(), img_finale, prod['id']))
+                                        conn.commit()
+                                finally:
+                                    release_db_connection(conn)
                             
                             st.session_state[f"edition_active_{prod['id']}"] = False
-                            st.cache_data.clear()
+                            charger_produits.clear()
                             st.success("Modifications enregistrées !")
                             st.rerun()
             st.markdown("---")
@@ -722,10 +729,12 @@ def afficher_gestion_commandes():
                     if nouveau_statut != cmd["statut"]:
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("UPDATE commandes SET statut = %s WHERE id = %s;", (nouveau_statut, cmd['id']))
-                                conn.commit()
-                            conn.close()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("UPDATE commandes SET statut = %s WHERE id = %s;", (nouveau_statut, cmd['id']))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
                         st.success("Mis à jour !")
                         st.rerun()
                 with col_wa:
@@ -737,10 +746,12 @@ def afficher_gestion_commandes():
                     if st.button("🗑️", key=f"del_cmd_{cmd['id']}"):
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("DELETE FROM commandes WHERE id = %s;", (cmd['id'],))
-                                conn.commit()
-                            conn.close()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("DELETE FROM commandes WHERE id = %s;", (cmd['id'],))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
                         st.success("Supprimée !")
                         st.rerun()
             st.markdown("---")
@@ -770,22 +781,26 @@ def afficher_gestion_avis():
                     if nouveau_etat != statut_pub:
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("UPDATE avis_clients SET publie = %s WHERE id = %s;", (nouveau_etat, avis['id']))
-                                conn.commit()
-                            conn.close()
-                        st.cache_data.clear()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("UPDATE avis_clients SET publie = %s WHERE id = %s;", (nouveau_etat, avis['id']))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
+                        charger_avis_publies.clear()
                         st.success("Statut de l'avis mis à jour !")
                         st.rerun()
                 with c3:
                     if st.button("🗑️", key=f"del_avis_{avis['id']}"):
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("DELETE FROM avis_clients WHERE id = %s;", (avis['id'],))
-                                conn.commit()
-                            conn.close()
-                        st.cache_data.clear()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("DELETE FROM avis_clients WHERE id = %s;", (avis['id'],))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
+                        charger_avis_publies.clear()
                         st.rerun()
             st.markdown("---")
 
@@ -838,11 +853,13 @@ elif choix_menu == t["menu_avis"]:
                     date_now = datetime.now().strftime("%d/%m/%Y")
                     conn = get_db_connection()
                     if conn:
-                        with conn.cursor() as cur:
-                            cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, FALSE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
-                            conn.commit()
-                        conn.close()
-                    st.cache_data.clear()
+                        try:
+                            with conn.cursor() as cur:
+                                cur.execute("INSERT INTO avis_clients (nom, note, produit, commentaire, date, publie) VALUES (%s, %s, %s, %s, %s, FALSE);", (nom_client.strip(), note_client, produit_concerne, commentaire.strip(), date_now))
+                                conn.commit()
+                        finally:
+                            release_db_connection(conn)
+                    charger_avis_publies.clear()
                     st.success("Merci ! Votre avis a été transmis et sera publié après validation par la boutique.")
                     st.rerun()
     with col_liste:
@@ -889,15 +906,17 @@ elif choix_menu == t["menu_vendeur"]:
                 if st.form_submit_button(t["btn_publier"], use_container_width=True):
                     if nom_produit.strip():
                         prix_final = int(prix_origine * (1 - taux_reduction / 100)) if appliquer_promo else prix_origine
-                        img_url = encoder_image_base64(photo_fichier) if photo_fichier else ""
+                        img_url = encoder_image_base64_optimisee(photo_fichier) if photo_fichier else ""
                         conn = get_db_connection()
                         if conn:
-                            with conn.cursor() as cur:
-                                cur.execute("INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);", 
-                                            (nom_produit.strip(), {"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}[cat_choisie], {"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[sub_choisie], prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), img_url))
-                                conn.commit()
-                            conn.close()
-                        st.cache_data.clear()
+                            try:
+                                with conn.cursor() as cur:
+                                    cur.execute("INSERT INTO produits (nom, categorie, sous_categorie, prix_origine, prix_final, en_promo, reduction, description, image_url) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);", 
+                                                (nom_produit.strip(), {"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}[cat_choisie], {"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[sub_choisie], prix_origine, prix_final, appliquer_promo, taux_reduction, description_produit.strip(), img_url))
+                                    conn.commit()
+                            finally:
+                                release_db_connection(conn)
+                        charger_produits.clear()
                         st.success(t["succes_publi"])
                         st.rerun()
         with tab_mes_prods: afficher_gestion_catalogue()
@@ -955,15 +974,16 @@ elif choix_menu == t["menu_panier"]:
                     
                     conn = get_db_connection()
                     if conn:
-                        with conn.cursor() as cur:
-                            cur.execute("INSERT INTO commandes (nom_client, telephone, adresse, details_articles, montant_total, statut, date_commande) VALUES (%s, %s, %s, %s, %s, 'En attente', %s);", 
-                                        (nom_client.strip(), tel_client.strip(), adresse_client.strip(), details_str, total_general, date_cmd))
-                            conn.commit()
-                        conn.close()
+                        try:
+                            with conn.cursor() as cur:
+                                cur.execute("INSERT INTO commandes (nom_client, telephone, adresse, details_articles, montant_total, statut, date_commande) VALUES (%s, %s, %s, %s, %s, 'En attente', %s);", 
+                                            (nom_client.strip(), tel_client.strip(), adresse_client.strip(), details_str, total_general, date_cmd))
+                                conn.commit()
+                        finally:
+                            release_db_connection(conn)
 
                     msg = f"👑 Commande Maman Dogo\nClient: {nom_client}\nTél: {tel_client}\nAdresse: {adresse_client}\n\n{details_str}\n\nTotal: {total_general:,} FCFA"
                     
-                    # Formate le numéro WhatsApp pour s'assurer qu'il soit bien au format international
                     num_whatsapp_destination = TEL_PAR_DEFAUT
                     lien_wa = f"https://wa.me/{num_whatsapp_destination}?text={urllib.parse.quote(msg)}"
                     
