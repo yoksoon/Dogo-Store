@@ -4,7 +4,7 @@ from datetime import datetime
 import base64
 import os
 import io
-from PIL import Image, ImageOps
+from PIL import Image
 
 # Importation sécurisée de psycopg2 et du pool de connexions
 try:
@@ -71,18 +71,21 @@ def release_db_connection(conn):
         except Exception:
             pass
 
-# --- COMPRESSION ET DIMENTIONNEMENT D'IMAGE HARMONISÉ ---
-def encoder_image_base64_optimisee(fichier_image, target_size=(600, 600)):
+# --- ENCODAGE IMAGE SANS DECOUPAGE ET AVEC HAUTE QUALITÉ ---
+def encoder_image_base64_optimisee(fichier_image, max_size=(1200, 1200)):
     if fichier_image is not None:
         try:
             image = Image.open(fichier_image)
+            # Conserver les couleurs d'origine sans altération
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
             
-            image_fit = ImageOps.fit(image, target_size, Image.Resampling.LANCZOS)
+            # Redimensionnement proportionnel (sans rognage ni déformation)
+            image.thumbnail(max_size, Image.Resampling.LANCZOS)
             
             buffer = io.BytesIO()
-            image_fit.save(buffer, format="JPEG", quality=80, optimize=True)
+            # Qualité maximale (100) pour garder l'image intacte
+            image.save(buffer, format="JPEG", quality=100, optimize=True)
             base64_str = base64.b64encode(buffer.getvalue()).decode()
             return f"data:image/jpeg;base64,{base64_str}"
         except Exception:
@@ -328,6 +331,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* CARTE PRODUIT ET HARMONISATION SANS ROGNAGE */
     .product-card {
         background-color: #ffffff;
         border-radius: 16px;
@@ -350,7 +354,7 @@ st.markdown("""
 
     .product-img-wrapper {
         width: 100%;
-        height: 220px;
+        height: 250px;
         border-radius: 12px;
         overflow: hidden;
         margin-bottom: 10px;
@@ -358,18 +362,21 @@ st.markdown("""
         display: flex;
         align-items: center;
         justify-content: center;
+        padding: 6px;
+        border: 1px dashed #f8bbd0;
     }
 
     .product-img-wrapper img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
+        max-width: 100%;
+        max-height: 100%;
+        width: auto;
+        height: auto;
+        object-fit: contain; /* Conserve l'intégralité de l'image sans la couper */
         transition: transform 0.3s ease;
     }
 
     .product-img-wrapper img:hover {
-        transform: scale(1.05);
+        transform: scale(1.03);
     }
 
     .product-desc {
@@ -900,7 +907,7 @@ elif choix_menu == t["menu_avis"]:
                         finally:
                             release_db_connection(conn)
                     charger_avis_publies.clear()
-                    st.success("Merci ! Votre avis a été transmis et sera publié après validation par la boutique.")
+                    st.success("Merci ! Votre avis a été transmitted et sera publié après validation par la boutique.")
                     st.rerun()
     with col_liste:
         st.markdown("### 💬 Avis Validés")
