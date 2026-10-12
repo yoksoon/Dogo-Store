@@ -4,7 +4,7 @@ from datetime import datetime
 import base64
 import os
 import io
-from PIL import Image
+from PIL import Image, ImageOps
 
 # Importation sécurisée de psycopg2 et du pool de connexions
 try:
@@ -71,16 +71,19 @@ def release_db_connection(conn):
         except Exception:
             pass
 
-# --- COMPRESSION ET CONVERSION D'IMAGE OPTIMISÉE ---
-def encoder_image_base64_optimisee(fichier_image, max_size=(500, 500)):
+# --- COMPRESSION ET DIMENTIONNEMENT D'IMAGE HARMONISÉ ---
+def encoder_image_base64_optimisee(fichier_image, target_size=(600, 600)):
     if fichier_image is not None:
         try:
             image = Image.open(fichier_image)
             if image.mode in ("RGBA", "P"):
                 image = image.convert("RGB")
-            image.thumbnail(max_size)
+            
+            # Recadrage centré propre pour garder un ratio uniforme
+            image_fit = ImageOps.fit(image, target_size, Image.Resampling.LANCZOS)
+            
             buffer = io.BytesIO()
-            image.save(buffer, format="JPEG", quality=75, optimize=True)
+            image_fit.save(buffer, format="JPEG", quality=80, optimize=True)
             base64_str = base64.b64encode(buffer.getvalue()).decode()
             return f"data:image/jpeg;base64,{base64_str}"
         except Exception:
@@ -326,6 +329,7 @@ st.markdown("""
         color: #ffffff !important;
     }
 
+    /* CARTE PRODUIT & STYLE IMAGE HARMONISÉ */
     .product-card {
         background-color: #ffffff;
         border-radius: 16px;
@@ -338,13 +342,36 @@ st.markdown("""
         justify-content: space-between;
         height: 100%;
         margin-bottom: 15px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     
-    .product-card img {
-        border-radius: 12px;
-        max-height: 200px;
-        object-fit: cover;
+    .product-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(233, 30, 99, 0.15);
+    }
+
+    .product-img-wrapper {
         width: 100%;
+        height: 220px;
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 10px;
+        background-color: #fff5f7;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .product-img-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.3s ease;
+    }
+
+    .product-img-wrapper img:hover {
+        transform: scale(1.05);
     }
 
     .product-desc {
@@ -573,10 +600,20 @@ def afficher_rayon(cat_courante):
                 for index, produit in enumerate(produits_categorie):
                     with cols[index % 3]:
                         st.markdown('<div class="product-card">', unsafe_allow_html=True)
+                        
+                        # Affichage de l'image de produit unifiée
                         if produit.get("image_url"):
-                            st.image(produit["image_url"], use_container_width=True)
+                            st.markdown(f'''
+                                <div class="product-img-wrapper">
+                                    <img src="{produit["image_url"]}" alt="{produit["nom"]}">
+                                </div>
+                            ''', unsafe_allow_html=True)
                         else:
-                            st.markdown(f"<p style='color:#aaa;'>{t['sans_photo']}</p>", unsafe_allow_html=True)
+                            st.markdown(f'''
+                                <div class="product-img-wrapper">
+                                    <p style="color:#aaa; font-size:0.9rem;">{t["sans_photo"]}</p>
+                                </div>
+                            ''', unsafe_allow_html=True)
                         
                         avis_article = [a for a in tous_avis if a["produit"] == produit["nom"]]
                         if avis_article:
@@ -616,7 +653,7 @@ def afficher_gestion_catalogue():
                 c1, c2, c3, c4, c5 = st.columns([1, 2, 2, 1, 1])
                 with c1:
                     if prod.get("image_url"):
-                        st.image(prod["image_url"], width=50)
+                        st.image(prod["image_url"], width=60)
                     else:
                         st.write("📷")
                 with c2:
@@ -826,7 +863,11 @@ elif choix_menu == t["menu_promotions"]:
             with cols[index % 3]:
                 st.markdown('<div class="product-card">', unsafe_allow_html=True)
                 if produit.get("image_url"):
-                    st.image(produit["image_url"], use_container_width=True)
+                    st.markdown(f'''
+                        <div class="product-img-wrapper">
+                            <img src="{produit["image_url"]}" alt="{produit["nom"]}">
+                        </div>
+                    ''', unsafe_allow_html=True)
                 st.markdown(f'<span class="promo-badge">PROMO -{produit["reduction"]}%</span>', unsafe_allow_html=True)
                 st.markdown(f"### {produit['nom']}")
                 if produit.get("description"):
@@ -900,7 +941,7 @@ elif choix_menu == t["menu_vendeur"]:
                 appliquer_promo = st.checkbox(t["est_promo"])
                 taux_reduction = st.slider(t["taux_promo"], 5, 70, 15, 5) if appliquer_promo else 0
                 cat_choisie = st.selectbox(t["cat_choix"], list({"👶 Bébé": "Bébé", "🧒 Enfants": "Enfants", "👗 Femmes": "Femmes", "👔 Hommes": "Hommes"}.keys()))
-                sub_choisie = st.selectbox(t["sub_choix"], list({"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}.keys()))
+                sub_choisie = st.selectbox(t["sub_choix"], list({"👗 Vêtements": "Vêtements", "👟 Chaussures": "Chaussures", "🧵 Tissus": "Tissus", "👜 Accessoires": "Accessoires"}[.keys()))
                 photo_fichier = st.file_uploader("Photo", type=["jpg", "png", "jpeg"])
                 
                 if st.form_submit_button(t["btn_publier"], use_container_width=True):
