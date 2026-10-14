@@ -17,7 +17,7 @@ except ModuleNotFoundError:
 
 # Configuration de la page
 st.set_page_config(
-    page_title="Maman Dogo Food & Saveurs", 
+    page_title="Deligro by Codou Senghor", 
     page_icon="🍲", 
     layout="wide"
 )
@@ -152,8 +152,10 @@ def init_db_automatique():
 
                 cur.execute("""
                     INSERT INTO infos_boutique (id, nom_boutique, description, telephone, adresse)
-                    VALUES (1, 'Maman Dogo Food & Saveurs', 'Délicieux plats fait maison, jus locaux et spécialités gourmandes préparés avec amour.', %s, 'Dakar, Sénégal')
-                    ON CONFLICT (id) DO UPDATE SET telephone = EXCLUDED.telephone;
+                    VALUES (1, 'Deligro by Codou Senghor', 'Délicieux plats fait maison, jus locaux et spécialités gourmandes préparés avec amour.', %s, 'Dakar, Sénégal')
+                    ON CONFLICT (id) DO UPDATE SET 
+                        nom_boutique = EXCLUDED.nom_boutique,
+                        telephone = EXCLUDED.telephone;
                 """, (BOUTIQUE_TEL,))
                 conn.commit()
         finally:
@@ -176,7 +178,7 @@ def charger_infos_boutique():
     if res:
         return res
     return {
-        "nom_boutique": "Maman Dogo Food & Saveurs",
+        "nom_boutique": "Deligro by Codou Senghor",
         "description": "Délicieux plats fait maison, jus locaux et spécialités gourmandes préparés avec amour.",
         "telephone": BOUTIQUE_TEL,
         "adresse": "Dakar, Sénégal"
@@ -279,15 +281,26 @@ st.markdown("""
     .brand-title {
         font-size: clamp(1.5rem, 4vw, 2.8rem) !important;
         font-weight: 800;
-        background: -webkit-linear-gradient(45deg, #e65100, #ff6f00, #d84315, #d4af37);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        color: #e65100;
         text-align: center;
         margin-bottom: 2px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         word-break: break-word;
     }
+    
+    .brand-author {
+        font-size: clamp(1.8rem, 4.5vw, 3.2rem) !important;
+        font-weight: 900;
+        background: -webkit-linear-gradient(45deg, #d4af37, #e65100, #c2185b, #d4af37);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 2px 10px rgba(212, 175, 55, 0.3);
+        letter-spacing: 1px;
+        text-decoration: underline;
+        text-decoration-color: #d4af37;
+    }
+
     .brand-subtitle {
         text-align: center;
         color: #bf360c;
@@ -328,7 +341,6 @@ st.markdown("""
         color: #ffffff !important;
     }
 
-    /* CARTE PLAT ET HARMONISATION SANS ROGNAGE */
     .product-card {
         background-color: #ffffff;
         border-radius: 16px;
@@ -479,7 +491,6 @@ CATEGORIES_FOOD = list(STRUCTURE_FOOD.keys())
 # --- TRADUCTIONS ---
 TRADUCTIONS = {
     "FR": {
-        "titre_app": f"🍲 {infos_boutique['nom_boutique']}",
         "sous_titre_app": infos_boutique['description'],
         "menu_plats": "🍛 Plats Chauds",
         "menu_boissons": "🥤 Boissons & Jus",
@@ -512,7 +523,6 @@ TRADUCTIONS = {
         "recherche": "🔎 Rechercher un plat, une boisson..."
     },
     "WOLOF": {
-        "titre_app": f"🍲 {infos_boutique['nom_boutique']}",
         "sous_titre_app": "Lék bu neex, reer ak añ bu saddu, sangara ak jus neex yi.",
         "menu_plats": "🍛 Ceeb ak Yassa",
         "menu_boissons": "🥤 Jus ak Nann yi",
@@ -555,7 +565,7 @@ if os.path.exists("a.jpeg"):
         <div class="logo-xxl-container">
             <div class="logo-xxl-frame">
                 <div class="logo-xxl-inner">
-                    <img src="data:image/jpeg;base64,{logo_base64}" alt="Logo Maman Dogo Food">
+                    <img src="data:image/jpeg;base64,{logo_base64}" alt="Logo Deligro">
                 </div>
             </div>
         </div>
@@ -568,7 +578,7 @@ with col_head_lang:
     lang_code = "FR" if langue == "Français" else "WOLOF"
     t = TRADUCTIONS[lang_code]
 
-st.markdown(f'<h1 class="brand-title">{t["titre_app"]}</h1>', unsafe_allow_html=True)
+st.markdown('<h1 class="brand-title">🍲 DELIGRO <br>by <span class="brand-author">Codou Senghor</span></h1>', unsafe_allow_html=True)
 st.markdown(f'<p class="brand-subtitle">{t["sous_titre_app"]}</p>', unsafe_allow_html=True)
 
 menu_options = [
@@ -1027,7 +1037,7 @@ elif choix_menu == t["menu_panier"]:
                         finally:
                             release_db_connection(conn)
 
-                    msg = f"🍲 Commande Maman Dogo Food\nClient: {nom_client}\nTél: {tel_client}\nLivraison: {adresse_client}\n\n{details_str}\n\nTotal: {total_general:,} FCFA"
+                    msg = f"🍲 Commande Deligro by Codou Senghor\nClient: {nom_client}\nTél: {tel_client}\nLivraison: {adresse_client}\n\n{details_str}\n\nTotal: {total_general:,} FCFA"
                     
                     num_whatsapp_destination = TEL_PAR_DEFAUT
                     lien_wa = f"https://wa.me/{num_whatsapp_destination}?text={urllib.parse.quote(msg)}"
